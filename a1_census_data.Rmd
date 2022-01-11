@@ -36,6 +36,7 @@ library(units)
 
 # Step 1: Define variables
 
+
 ```{r}
 vars <- c(total_hhs = 'B08203_001',
           no_veh = 'B08203_002',
