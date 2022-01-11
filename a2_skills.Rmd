@@ -1,0 +1,113 @@
+---
+title: "Skills for Analysis Assignment 1"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::material
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The followings skills will be useful for Analysis Assignment 2. They are listed here alphabetically. I don't want to bias your thinking about which ones you'll end up using and in what order. But this page will be a useful reference.
+
+* **Apply a ggplot theme:** You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
+* **Calculate an area:** A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
+* **Calculate new variables:** When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
+* **Collapse data:** This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
+* **Convert units:** When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
+* **Create a chloropleth map:** A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+* **Create a histogram:** A histogram is a helpful way to illustrate the variation in a variable.
+* **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
+* **Define a color scale:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
+* **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
+* **Download census tract data:** You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
+* **Download employment data:** The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
+* **Find census variables:** You'll need to search for the names of the variables you want to include in your analysis.
+* **Format scale labels:** You may not be happy with the default tick-mark labels on your plot. These are easy to customize.
+* **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single column.
+* **List census variable names:** Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
+* **Log-transform a color scale:** If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
+* **Organize data columns:** You can use the `select()` function to delete variables you don't need and also to reorder columns.
+* **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
+
+# Apply a ggplot theme
+
+You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
+
+# Calculate an area
+
+A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
+
+# Calculate new variables
+
+When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
+
+# Collapse data
+
+This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
+
+# Convert units 
+
+When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
+
+# Create a chloropleth map 
+
+A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+
+# Create a histogram 
+
+A histogram is a helpful way to illustrate the variation in a variable.
+
+# Create an interactive map
+
+Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
+
+# Define a color scale
+
+There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
+
+# Define study area boundary
+
+In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
+
+# Download census tract data
+
+You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
+
+# Download employment data
+
+The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
+
+# Find census variables
+
+You'll need to search for the names of the variables you want to include in your analysis.
+
+# Format scale labels
+
+You may not be happy with the default tick-mark labels on your plot. These are easy to customize.
+
+# Join two data frames
+
+If you have employment data in one dataframe and population data in another, you'll want to combine them into a single column.
+
+# List census variable names
+
+Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
+
+# Log-transform a color scale
+
+If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
+
+# Organize data columns
+
+You can use the `select()` function to delete variables you don't need and also to reorder columns.
+
+# Summarize tract statistics
+
+Histograms and maps are great, but a table can also be really informative.
+
+
