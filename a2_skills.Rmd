@@ -33,11 +33,13 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Find census variables:** You'll need to search for the names of the variables you want to include in your analysis.
 * **Format scale labels:** You may not be happy with the default tick-mark labels on your plot. These are easy to customize.
 * **Get regional data:** Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
-* **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single column.
+* **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single dataframe.
 * **List census variable names:** Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
 * **Log-transform a color scale:** If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
-* **Organize data columns:** You can use the `select()` function to delete variables you don't need and also to reorder columns.
+* **Organize data columns:** At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
+* **Separate geometry from dataset:** You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
 * **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
+* **Write data to a file:** When you have all the data how you want it, you should save it so you can use it for subsequent assignments. 
 
 # Add households or jobs to a tract
 
@@ -56,24 +58,96 @@ You have a lot of flexibility in designing your ggplot charts and maps, but some
 
 A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
 
+Let's say I've already loaded data on my zones, including the zone boundaries. I can create a new variable called `tract_area` using mutate() and calculate the value of that variable as the area of each zone using `st_area()`.
+
+```{r, include=FALSE}
+library(sf)
+
+census <- st_read("existing/data/intermediate_steps/census.geojson")
+```
+
+
+```{r}
+library(tidyverse)
+
+census <- census %>%
+  mutate(tract_area = st_area(geometry))
+```
+
+You'll notice that the area is given in square meters, which might not be what you want. You may want to [convert the units](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#convert-units) to square miles or square kilometers or acres or something.
+
 # Calculate new variables
 
 When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
 
-# Collapse data
+If you've just [downloaded your census data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) into a dataframe called `census`, you'll probably need to combine some of your variables into new variables. 
 
-This is useful if you want to collapse block-level data to the tract level.
+For example, you might have variables for 16 different income categories, and you only want five income categories (perhaps based on [regional quintiles](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data)).
+
+Notice that the variable names in your dataframe differ from the ones you [may have specified](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names). The `get_acs` function creates two columns for each variable. The estimated value is in a column with the name you specified with an E appended (E for estimate). There is also a column with the name you specified and an M appended to indicate the margin of error for that estimate.  
 
 ```{r}
+library(tidyverse)
 
+census <- census %>%
+  mutate(inc_quint_1 = inc_lt_10kE +
+                       inc_btw_10k_15kE +
+                       inc_btw_15k_20kE +
+                       inc_btw_20k_25kE +
+                       inc_btw_25k_30kE,
+         inc_quint_2 = inc_btw_30k_35kE +
+                       inc_btw_35k_40kE +
+                       inc_btw_40k_45kE +
+                       inc_btw_45k_50kE +
+                       inc_btw_50k_60kE,
+         inc_quint_3 = inc_btw_60k_75kE +
+                       inc_btw_75k_100kE,
+         inc_quint_4 = inc_btw_100k_125kE +
+                       inc_btw_125k_150kE,
+         inc_quint_5 = inc_btw_150k_200kE +
+                       inc_gt_200kE)
 ```
 
 
+# Collapse data
 
+This is useful if you want to collapse block-level data to the tract level. So for example, you might use it if you just [loaded the LEHD data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data).
+
+```{r, include=FALSE}
+lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/va/wac/va_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
+  rename(total_emp = C000) %>%
+  mutate(basic_emp = CNS01+CNS02+CNS03+CNS04+CNS05+CNS06+CNS08+CNS09) %>%
+  rename(retail_emp = CNS07) %>%
+  mutate(service_emp = total_emp - basic_emp - retail_emp) %>%
+  select(w_geocode, total_emp, basic_emp, retail_emp, service_emp)
+```
+
+In LEHD data, the GEOID is in a variable called w_geocode, and it's stored as a number, so we'll convert it to a character. The first 11 digits of census block's GEOID indicate the census tract, so we'll use that to create a variable indicating the census tract, and we'll name *that* GEOID. Then we'll drop the `w_geocode` column (by putting a negative sign before its name in the `select()` function). Then we'll use `group_by()` and `summarize()` to collapse the data to the tract level. 
+
+```{r}
+library(tidyverse)
+
+lehd_tracts <- lehd_blocks %>%
+  mutate(w_geocode = as.character(w_geocode)) %>%
+  mutate(GEOID = substr(w_geocode, 1, 11)) %>%
+  select(-w_geocode) %>%
+  group_by(GEOID) %>%
+  summarize(across(everything(), ~sum(.)))
+```
+
+Now I have the total employment in each of these categories for every census tract in the state. I'd want to filter that down to just my study area, but if I already have the [population data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) for my study area, I can just [join the two dataframes](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#join-two-data-frames) and that will take care of the filtering.
 
 # Convert units 
 
-When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
+When you calculate an area, the result will be in the units of your projected coordinate system (typically square feet or square meters) or in square meters if you're using a geographic coordinate system like WGS 84. You may want to convert the units to something like acres (`acres`), square kilometers (`km2`) or square miles (`mi2`).
+
+```{r}
+library(units)
+
+census <- census %>%
+  mutate(tract_area = set_units(tract_area, "mi2")) 
+```
+
 
 # Create a chloropleth map 
 
@@ -93,12 +167,19 @@ There are several predefined color palettes you can use, and some useful functio
 
 # Define study area boundary
 
-```{r}
+In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
 
+If all you need is the boundary, you can use the `core_based_statistical_areas()` function in the `tigris` package. That will return the boundaries for all the CBSAs in the United States. Then you can filter those to only keep the one corresponding to your study area (I'm using Richmond in this example - the GEOID is 40060)
+
+```{r,eval=FALSE}
+library(tidyverse)
+library(tigris)
+
+boundary <- core_based_statistical_areas() %>%
+  filter(GEOID == "40060")
 ```
 
-
-In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
+If you also want to get region-level data in addition to just the boundaries, you can [use the tidycensus package](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data).
 
 # Distribute growth evenly
 
@@ -110,23 +191,13 @@ You'll need to download several tract-level variables from the census. You'll fi
 
 Assuming you've already [defined a list of variables](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names) and saved it as a [character vector](https://r4ds.had.co.nz/vectors.html){target="_blank"} called `vars`, you can use the `get_acs()` function in the `tidycensus` package to download the data. 
 
-```{r, echo = FALSE}
+```{r, eval=FALSE}
 vars <- c(total_hhs = 'B08203_001',
           no_veh = 'B08203_002',
-          lo_veh2w_1v = 'B08203_021',
-          lo_veh3w_1v = 'B08203_027',
-          lo_veh3w_2v = 'B08203_028',
           hh_1person = 'B08201_007',
           hh_2person = 'B08201_013',
           hh_3person = 'B08201_019',
-          hh_4person_fam = 'B11016_005',
-          hh_4person_nfam = 'B11016_013',
-          hh_5person_fam = 'B11016_006',
-          hh_5person_nfam = 'B11016_014',
-          hh_6person_fam = 'B11016_007',
-          hh_6person_nfam = 'B11016_015',
-          hh_7person_fam = 'B11016_008',
-          hh_7person_nfam = 'B11016_016',
+          hh_4person_plus = 'B08201_025',
           inc_lt_10k = 'B19001_002',
           inc_btw_10k_15k = 'B19001_003',
           inc_btw_15k_20k = 'B19001_004',
@@ -134,7 +205,7 @@ vars <- c(total_hhs = 'B08203_001',
           inc_btw_25k_30k = 'B19001_006',
           inc_btw_30k_35k = 'B19001_007',
           inc_btw_35k_40k = 'B19001_008',
-          inc_btw_40k_45k = 'B19001_008',
+          inc_btw_40k_45k = 'B19001_009',
           inc_btw_45k_50k = 'B19001_010',
           inc_btw_50k_60k = 'B19001_011',
           inc_btw_60k_75k = 'B19001_012',
@@ -145,29 +216,75 @@ vars <- c(total_hhs = 'B08203_001',
           inc_gt_200k = 'B19001_017')
 ```
 
-I'll use the `get_acs()` function from the `tidycensus` package. `geography = 'tract'` means I want tract-level data. I'll also specify the state and county (or counties - I can provide a list of all the counties in my study area here if there is more than one). In most cases, I'll set `output = wide` because I want each variable in its own column (you can see an exception [here]() though).
+I'll use the `get_acs()` function from the `tidycensus` package. `geography = 'tract'` means I want tract-level data. I'll also specify the state and county (or counties - I can provide a list of all the counties in my study area here if there is more than one). In most cases, I'll set `output = wide` because I want each variable in its own column (you can see an exception [here]() though). You'll also need the zone/tract boundaries at some point, so you should get those at the same time by setting `geometry = TRUE`.
 
-```{r}
+```{r, eval=FALSE}
 library(tidycensus)
 
-zones <- get_acs(geography = 'tract',
+census <- get_acs(geography = 'tract',
                  state = 'MA',
                  county = c('Suffolk', 'Middlesex'),
                  variables = vars,
-                 output = 'wide')
+                 output = 'wide',
+                 geometry = TRUE)
 ```
 
+If your study area has a lot of counties, you might find it really tiresome to type in the names of all of them. Another approach is to [define the study area boundary](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary) (in this example, I've saved it to an layer called `boundary`), then download census tracts for the entire state (i.e. leave the county argument out), and then filter them to only include the ones within the study area. This will not work if you do not set `geometry = TRUE` in the `get_acs()` function.
+
+```{r, eval=FALSE}
+library(tidycensus)
+library(sf)
+
+census <- get_acs(geography = 'tract',
+                 state = 'VA',
+                 variables = vars,
+                 output = 'wide',
+                 geometry = TRUE) %>%
+  st_filter(boundary)
+```
 
 # Download employment data
 
 The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
 
+You'll find the data you need [here] (https://lehd.ces.census.gov/data/#lodes){target="_blank"}
+
+Select the appropriate state from the drop-down menu, and select 'Workplace Area Characteristics (WAC)' from the 'Type' drop-down menu. Then click the 'View Files' button to see a list of available files. You can read about the file naming conventions [here](https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf){target="_blank"}. The one you want is called [xx]_wac_S000_JT00_2019.csv.gz, where xx is the two-letter postal code for the state. Right-click on the link for the file and select 'copy link address'.
+
+You can read in the file to R directly from that link. That file has 53 variables in it. The ones you want give the number of workers by industry code. See page 7 of [this document](https://lehd.ces.census.gov/data/lodes/LODES7/LODESTechDoc7.5.pdf){target="_blank"}. You'll want:
+
+* Total workers (C000)
+* Basic employment 
+    + Agriculture, Forestry, Fishing, and Hunting (CNS01)
+    + Mining and extraction (CNS02)
+    + Utilities (CNS03)
+    + Construction (CNS04)
+    + Manufacturing (CNS05)
+    + Wholesale trade (CNS06)
+    + Transportation and warehousing (CNS06)
+* Retail employment (CNS07)
+* Service employment (total - basic - retail)
+
+So you can use `select()` to keep those (and use `mutate()` to calculate service employment) and drop everything else (make sure you also keep w_geocode, which has the GEOID for the block). 
+
+This data is at the census block level, not the tract level. You'll need to [collapse it to the tract level](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#collapse-data).
+
+```{r, eval=FALSE}
+library(tidyverse)
+
+lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/va/wac/va_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
+  rename(total_emp = C000) %>%
+  mutate(basic_emp = CNS01+CNS02+CNS03+CNS04+CNS05+CNS06+CNS08+CNS09) %>%
+  rename(retail_emp = CNS07) %>%
+  mutate(service_emp = total_emp - basic_emp - retail_emp) %>%
+  select(w_geocode, total_emp, basic_emp, retail_emp, service_emp)
+```
+
 # Find census variables
 
 You'll need to search for the names of the variables you want to include in your analysis.
 
-If you've already loaded the `tidycensus` package, you can type `View(load_variables(2019, "acs5"))`^[The first argument (`2019`) indicates that you want the variables that are available for 2019 and the second argument (`"acs5"`) indicates that you want variables that are included in the 5-year sample of the American Community Survey. The 5-year sample is from survey respondents pooled over a 5-year period. An alternative is `"acs1"`, which would give you just the households who completed the survey in 2019 (which is a much smaller sample, so those estimates would have more uncertainty associated with them). You could also specify `"sf1"` instead of `"acs5"` or `"acs1"` if you wanted data from the decennial census. The decennial census is meant to include everyone, so there is no sampling error, but fewer variables are available. 
-] into your console to interactively search for variables that you'd like to include in your analysis. That will open a table of all the available variables in your viewer. Here's what you'll see if you start searching for variables that have to do with vehicles:
+If you've already loaded the `tidycensus` package, you can type `View(load_variables(2019, "acs5"))`**\*** into your console to interactively search for variables that you'd like to include in your analysis. That will open a table of all the available variables in your viewer. Here's what you'll see if you start searching for variables that have to do with vehicles:
 
 ![](images/var_search_srnsht.png)
 
@@ -178,6 +295,8 @@ You'll see that the table has three columns.
 * The third column, called "concept," is the name of the table identified in the first part of the variable name.
 
 Many tables are cross-tabulations that present the number of people, homes, or households in each combination of two categories. Many values can be found in multiple tables. For example, you can find the total number of workers who commute to work by car in B08006 (Sex of worker by means of transportation to work) and B08101 (Means of transportation to work by age).
+
+**\*** *The first argument (`2019`) indicates that you want the variables that are available for 2019 and the second argument (`"acs5"`) indicates that you want variables that are included in the 5-year sample of the American Community Survey. The 5-year sample is from survey respondents pooled over a 5-year period. An alternative is `"acs1"`, which would give you just the households who completed the survey in 2019 (which is a much smaller sample, so those estimates would have more uncertainty associated with them). You could also specify `"sf1"` instead of `"acs5"` or `"acs1"` if you wanted data from the decennial census. The decennial census is meant to include everyone, so there is no sampling error, but fewer variables are available.*
 
 # Format scale labels
 
@@ -214,6 +333,8 @@ vars <- c(inc_lt_10k = 'B19001_002',
 
 Then I'll [download those variables](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) for all the core-based statistical areas in United States (`geography = metropolitan statistical area/micropolitan statistical area"` instead of `geography = "tract"`). I am *not* setting `output = 'wide'` because in this case I actually *do* want each variable in its own row (there will be a column with the variable name and column called `estimate` with the value of each variable). I'm setting `summary_var = 'B19001_001'` because that's the total number of households, and I want to calculate what percent of total households fall in each category.
 
+If you need the spatial extent of the study area, you could just add `geometry = TRUE` to the `get_acs()` function instead of [getting the boundaries through the `tigris` package](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary).
+
 After a pipe (`%>%`) I filter the data to only include my study area (I'm using Richmond in this example - the GEOID is 40060).
 
 After another pipe, I [create a variable](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-new-variables) with the percent of households in each category, and then I use the `cumsum()` function to calculate a cumulative percentage. Finally, I [delete the columns](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#organize-data-columns) I don't need, keeping only the cumulative percentage and variable names.
@@ -228,7 +349,8 @@ library(knitr)
 region_inc <- get_acs(
   geography = "metropolitan statistical area/micropolitan statistical area",
   variables = vars,
-  summary_var = 'B19001_001') %>%
+  summary_var = 'B19001_001',
+  geometry = TRUE) %>%
   filter(GEOID == "40060") %>%
   mutate(pct = estimate / summary_est) %>%
   mutate(cumul_pct = cumsum(pct)) %>%
@@ -242,7 +364,20 @@ From the table above, I can see that 20 percent of households have incomes below
 
 # Join two data frames
 
-If you have employment data in one dataframe and population data in another, you'll want to combine them into a single column.
+If you have [employment data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data) in one dataframe and [population data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) in another, you'll want to combine them into a single dataframe.
+
+In these examples, I know my population data only includes tracts in my study area because I filtered to to my study area boundary. My employment data is for the whole state. I'll do a left join, with the population data on the left (i.e. listed first), which wil drop all the rows of the employment data that aren't include in my population data.
+
+```{r}
+zones <- left_join(census, lehd_tracts)
+```
+
+A quick review on what the pipe (`%>%`) does. It takes the output of the function before it and enters it as the first argument in the function after it. So the line in the chunk above this is exactly the same as the following lines with a pipe:
+
+```{r, eval=FALSE}
+zones <- census %>%
+  left_join(lehd_tracts)
+```
 
 # List census variable names
 
@@ -251,20 +386,10 @@ Once you've [identified the census variable you want to include in your analysis
 ```{r}
 vars <- c('B08203_001',
           'B08203_002',
-          'B08203_021',
-          'B08203_027',
-          'B08203_028',
           'B08201_007',
           'B08201_013',
           'B08201_019',
-          'B11016_005',
-          'B11016_013',
-          'B11016_006',
-          'B11016_014',
-          'B11016_007',
-          'B11016_015',
-          'B11016_008',
-          'B11016_016',
+          'B08201_025',
           'B19001_002',
           'B19001_003',
           'B19001_004',
@@ -272,7 +397,7 @@ vars <- c('B08203_001',
           'B19001_006',
           'B19001_007',
           'B19001_008',
-          'B19001_008',
+          'B19001_009',
           'B19001_010',
           'B19001_011',
           'B19001_012',
@@ -288,20 +413,10 @@ But remember that you don't only want computers to be able to read your code. Yo
 ```{r}
 vars <- c(total_hhs = 'B08203_001',
           no_veh = 'B08203_002',
-          lo_veh2w_1v = 'B08203_021',
-          lo_veh3w_1v = 'B08203_027',
-          lo_veh3w_2v = 'B08203_028',
           hh_1person = 'B08201_007',
           hh_2person = 'B08201_013',
           hh_3person = 'B08201_019',
-          hh_4person_fam = 'B11016_005',
-          hh_4person_nfam = 'B11016_013',
-          hh_5person_fam = 'B11016_006',
-          hh_5person_nfam = 'B11016_014',
-          hh_6person_fam = 'B11016_007',
-          hh_6person_nfam = 'B11016_015',
-          hh_7person_fam = 'B11016_008',
-          hh_7person_nfam = 'B11016_016',
+          hh_4person_plus = 'B08201_025',
           inc_lt_10k = 'B19001_002',
           inc_btw_10k_15k = 'B19001_003',
           inc_btw_15k_20k = 'B19001_004',
@@ -309,7 +424,7 @@ vars <- c(total_hhs = 'B08203_001',
           inc_btw_25k_30k = 'B19001_006',
           inc_btw_30k_35k = 'B19001_007',
           inc_btw_35k_40k = 'B19001_008',
-          inc_btw_40k_45k = 'B19001_008',
+          inc_btw_40k_45k = 'B19001_009',
           inc_btw_45k_50k = 'B19001_010',
           inc_btw_50k_60k = 'B19001_011',
           inc_btw_60k_75k = 'B19001_012',
@@ -327,10 +442,87 @@ If you find that your chloropleth map doesn't show a lot of variation, you could
 
 # Organize data columns
 
-You can use the `select()` function to delete variables you don't need and also to reorder columns.
+At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
+
+Here are the first few rows of a dataframe with a 57 columns:
+
+```{r}
+library(knitr)
+
+kable(head(zones))
+```
+
+The only ones I want to keep are these 14:
+
+* `GEOID`
+* `total_hhsE`
+* `no_vehE`
+* `hh_1personE`
+* `hh_2personE`
+* `hh_3personE`
+* `hh_4person_plusE`
+* `inc_quint_1`
+* `inc_quint_2`
+* `inc_quint_3`
+* `inc_quint_4`
+* `inc_quint_5`
+* `total_emp`
+* `basic_emp`
+* `retail_emp`
+* `service_emp`
+
+That's the order they currently appear in, but for whatever reason, I'd like the employment variables to come first.
+
+```{r}
+final_data <- zones %>%
+  select(GEOID, 
+         total_emp,
+         basic_emp,
+         retail_emp,
+         service_emp,
+         total_hhsE,
+         no_vehE,
+         hh_1personE,
+         hh_2personE,
+         hh_3personE,
+         hh_4person_plusE,
+         inc_quint_1,
+         inc_quint_2,
+         inc_quint_3,
+         inc_quint_4,
+         inc_quint_5)
+
+kable(head(final_data))
+```
+
+# Separate geometry from dataset
+
+You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
+
+If you just need the zone boundaries without any of the associated variables, you can use `select()` to drop everything except the geometry column.
+
+```{r}
+zone_boundaries <- zones %>%
+  select(geometry)
+```
+
+If you just want the data without the geometry, you can use `st_drop_geometry()`.
+
+```{r}
+zone_data <- zones %>%
+  st_drop_geometry()
+```
+
 
 # Summarize tract statistics
 
 Histograms and maps are great, but a table can also be really informative.
 
+# Write data to a file
+
+When you have all the zone data how you want it, you should save it to a file so you can use it for subsequent assignments. I recommend saving the tract boundaries and the data [separately](), since the boundaries are the same for all alternatives, but population/employment data might be different, depending on whether your alternative includes land use changes in addition to (or rather than) transportation network changes.
+
+```{r}
+
+```
 
