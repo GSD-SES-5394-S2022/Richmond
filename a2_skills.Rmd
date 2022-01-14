@@ -1,5 +1,5 @@
 ---
-title: "Skills for Analysis Assignment 1"
+title: "Skills for Analysis Assignment 2"
 author: "GSD SES 5394"
 date: "Spring 2022"
 output: 
@@ -27,7 +27,6 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
 * **Define a color scale:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
 * **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
-* **Distribute growth evenly**: Your proposed alternative might involve increasing the population or employment by a constant percentage across all zones.
 * **Download census tract data:** You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
 * **Download employment data:** The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
 * **Find census variables:** You'll need to search for the names of the variables you want to include in your analysis.
@@ -35,7 +34,7 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Get regional data:** Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
 * **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single dataframe.
 * **List census variable names:** Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
-* **Log-transform a color scale:** If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
+* **Log-transform a scale:** If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
 * **Organize data columns:** At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
 * **Separate geometry from dataset:** You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
 * **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
@@ -45,12 +44,113 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 
 Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
 
+Maybe my proposal is to build a bunch of low-income housing in a particular neighborhood, and I think the result would be to add 100 low-income, zero-car, 1-person households to tract 51041101013 (that's the GEOID code). I'd need to add 100 to the total number of households, to the number of housholds in the lowest income quintile, to the number of zero-car households, and to the number of 1-person households.
+
+In this example, I'm assuming the data on your existing zones are already saved to a csv file, so I'll use that as a starting point (for your own assignment, it's more likely that you'll have created the dataset earlier, so you'll still have it in your environment with needing to load it from the file). 
+
+For each variable I want to change, I'll use an `ifelse()` function to indicate that for a row where the GEOID is "51041101013" (`GEOID == "51041101013"` in the first argument of the `ifelse()` function), I want to increase the value by 100 (`total_hhsE + 100` in the second argument), otherwise I'll leave the original value (`total_hhsE` in the last argument).
+
+```{r, message=FALSE, results='hide'}
+library(tidyverse)
+
+zones_new <- read_csv("existing/data/zone_data.csv") %>%
+  mutate(total_hhsE = ifelse(GEOID == "51041101013",
+                             total_hhsE + 100,
+                             total_hhsE),
+         no_vehE = ifelse(GEOID == "51041101013",
+                             no_vehE + 100,
+                             no_vehE),
+         hh_1personE = ifelse(GEOID == "51041101013",
+                             hh_1personE + 100,
+                             hh_1personE),
+         inc_quint_1 = ifelse(GEOID == "51041101013",
+                             inc_quint_1 + 100,
+                             inc_quint_1))
+```
+
+
 # Apply a ggplot theme
 
 You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
 
-```{r}
+```{r, include=FALSE}
+zones <- zones_new %>%
+  mutate(pct_no_veh = no_vehE / total_hhsE)
 
+hist <- ggplot(zones) +
+  geom_histogram(aes(x = pct_no_veh))
+```
+
+Here's a histogram with the default theme (see how you would have created it [here](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-histogram)).
+
+```{r, message=FALSE, warning=FALSE}
+hist
+```
+
+`theme_bw()` gives a nice, clean look.
+
+```{r, message=FALSE, warning=FALSE}
+hist +
+  theme_bw()
+```
+
+If you want to try something even more minimal, you could try `theme_minimal()`
+
+```{r, warning=FALSE, message=FALSE}
+hist +
+  theme_minimal()
+```
+
+There are a few other themes included in `tidyverse`. To see your options, just start typing `theme_` and some autocomplete options will appear.
+
+If you want even more themes to choose from, you could try the `ggthemes` package. `theme_few()` is based on guidelines from [Stephen Few](http://www.stephen-few.com/smtn.php){target={"_blank"}.
+
+```{r, message=FALSE, warning=FALSE}
+library(ggthemes)
+
+hist +
+  theme_few()
+```
+
+`theme_tufte()` is based on guidelines from [Edward Tufte](https://www.edwardtufte.com/tufte/books_vdqi){target="_blank"}.
+
+```{r, warning=FALSE, message=FALSE}
+library(ggthemes)
+
+hist +
+  theme_tufte()
+```
+
+For maps, `theme_map()` can be a good choice. If you've [created a chloropleth map](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map) called `hh_size_map`, you could apply `theme_map()` like this.
+
+```{r, include=FALSE}
+library(sf)
+
+census <- st_read("existing/data/intermediate_steps/census.geojson") %>%
+  mutate(avg_hh_size = (hh_1personE +
+           2 * hh_2personE +
+           3 * hh_3personE +
+           4 * hh_4person_plusE) / total_hhsE)
+
+hh_size_map <- ggplot(census) +
+  geom_sf(aes(fill = avg_hh_size), color=NA)
+```
+
+```{r}
+library(ggthemes)
+
+hh_size_map +
+  theme_map()
+```
+
+
+That will overlap the legend with the map, which you won't always want. `theme_void()` can be a good alternative.
+
+```{r}
+library(tidyverse)
+
+hh_size_map +
+  theme_void()
 ```
 
 
@@ -60,14 +160,10 @@ A lot of the variables you're likely to be working with are counts (e.g. number 
 
 Let's say I've already loaded data on my zones, including the zone boundaries. I can create a new variable called `tract_area` using mutate() and calculate the value of that variable as the area of each zone using `st_area()`.
 
-```{r, include=FALSE}
-library(sf)
-
-census <- st_read("existing/data/intermediate_steps/census.geojson")
-```
 
 
-```{r}
+
+```{r, message=FALSE}
 library(tidyverse)
 
 census <- census %>%
@@ -141,7 +237,7 @@ Now I have the total employment in each of these categories for every census tra
 
 When you calculate an area, the result will be in the units of your projected coordinate system (typically square feet or square meters) or in square meters if you're using a geographic coordinate system like WGS 84. You may want to convert the units to something like acres (`acres`), square kilometers (`km2`) or square miles (`mi2`).
 
-```{r}
+```{r, message=FALSE}
 library(units)
 
 census <- census %>%
@@ -151,19 +247,172 @@ census <- census %>%
 
 # Create a chloropleth map 
 
-A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+A static chloropleth map is a useful way to display variation across space on a figure you want to include in report. You can add your tract polygons to a ggplot and use the aes() function withing the geom_sf() function to indicate which variable the tract colors should represnet. `color=NA` means the map won't draw outlines for the zone boundaries. If you want outlines, you can select a color (for example, `color = "red"`). You can see a list of all the color names R recognizes by typing `colors()` into your console.
+
+```{r}
+library(sf)
+
+hh_size_map <- ggplot(census) +
+  geom_sf(aes(fill = avg_hh_size), color=NA)
+
+hh_size_map
+```
+
+You might want to customize that map further: you could choose a different color ramp, customize the legend, [apply a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme), add a base map, display the street network, or reproject the data.
 
 # Create a histogram 
 
 A histogram is a helpful way to illustrate the variation in a variable.
 
+```{r, message=FALSE, warning=FALSE}
+hist <- ggplot(zones) +
+  geom_histogram(aes(x = pct_no_veh))
+
+hist
+```
+
+You can change the outline and fill colors of the histgram bars using the `fill` and `color` arguments within `geom_histogram()`. You can see a list of all the color names R recognizes by typing `colors()` into your console.
+
+```{r, message=FALSE, warning=FALSE}
+hist <- ggplot(zones) +
+  geom_histogram(aes(x = pct_no_veh),
+                 fill = "seashell1",
+                 color = "thistle4")
+
+hist
+```
+
+You could customize the plot further by [applying a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme).
+
 # Create an interactive map
 
 Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
 
-# Define a color scale
+I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
+
+```{r, warning=FALSE}
+library(leaflet)
+library(htmlwidgets)
+
+map <- leaflet(census) %>%
+  addProviderTiles("Stamen.TonerLite") %>%
+  addPolygons(popup = ~GEOID,
+              weight = 1,
+              opacity = 1,
+              highlightOptions =
+                highlightOptions(fillColor = "red"))
+
+saveWidget(map, file = 'zones/boundaries.html')
+```
+
+
+# Define a color ramp
 
 There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
+
+The [viridis](https://bids.github.io/colormap/){target="_blank"} color ramps are meant to be colorblind friendly and to reproduce reasonbly well in grayscale (for example, if someone prints your graphic then photocopies it with a black-and-white printer). There are 4 options.
+
+Option A:
+
+```{r}
+hh_size_map +
+  scale_fill_viridis_c(option = "A")
+```
+
+Option B:
+
+```{r}
+hh_size_map +
+  scale_fill_viridis_c(option = "B")
+```
+
+Option C:
+
+```{r}
+hh_size_map +
+  scale_fill_viridis_c(option = "C")
+```
+
+Option D (this is the default if you don't specify an option):
+
+```{r}
+hh_size_map +
+  scale_fill_viridis_c(option = "D")
+```
+
+You can reverse the color ramp values by setting `begin = 1, end = 0`.
+
+```{r}
+hh_size_map +
+  scale_fill_viridis_c(option = "D", 
+                       begin = 1, end = 0)
+```
+
+You can also set up your own color ramp using `scale_fill_gradient()` and specifying low and high values. Here's as scale that varies continuously from blue to red.
+
+```{r}
+hh_size_map +
+  scale_fill_gradient(low = "blue", high = "red")
+```
+
+`scale_fill_gradient2()` will let you specify low, medium, and high values. Here's a ramp that varies from green, to yellow, to red (which would be intuitive because of the analogy to a traffic signal, but not accessible for someone with red-green colorblindness). You also need to set a midpoint value - which I'll set as the median value.
+
+```{r}
+hh_size_map +
+  scale_fill_gradient2(low = "green", mid = "yellow", high = "red",
+                       midpoint = median(census$avg_hh_size, na.rm = TRUE))
+```
+
+`scale_fill_gradientn()` will let you specify as many colors as you want to include in your color ramp. Here's a ramp that varies from red to orange to yellow to green to blue to purple.
+
+```{r}
+hh_size_map +
+  scale_fill_gradientn(colors = c("red", 
+                                  "orange", 
+                                  "yellow", 
+                                  "green", 
+                                  "blue", 
+                                  "purple"))
+```
+
+The `RColorBrewer` package offers a bunch of pre-defined palettes that can be useful for continuous data. You can view the options with the function `display.brewer.all()
+
+```{r, fig.height=8}
+library(RColorBrewer)
+
+display.brewer.all()
+```
+
+The top group of palettes you see above are sequential palettes, which range from dark to light colors.
+
+```{r}
+map_palette <- brewer.pal(5, "PuBuGn")
+
+hh_size_map +
+  scale_fill_gradientn(colors = map_palette)
+```
+
+The last group of colors are diverging palettes, which range from dark to light to dark colors.
+
+```{r}
+map_palette <- brewer.pal(5, "Spectral")
+
+hh_size_map +
+  scale_fill_gradientn(colors = map_palette)
+```
+
+The middle group are qualitative palettes which work well for categorical variables, but would be confusing for a continuous color ramp.
+
+There are some other fun package that define color palettes, including [wesanderson](https://github.com/karthik/wesanderson){target="_blank"} (colors inspired by Wes Anderson films), [PNWColors](https://jakelawlor.github.io/portfolio/pnwcolors/){target="_blank"} (colors inspired by the package author's photos of the Pacific Northwest), [MetBrewer](https://github.com/BlakeRMills/MetBrewer/tree/main){target="_blank"} (inspired by works at the Metropolitan Museum of Art), and [MexBrewer](https://paezha.github.io/MexBrewer/){target="_blank"} (inspired by works of Mexican muralists). These four packages are structured similarly. Some of the available palettes don't work well for continuous variables (the order of the colors isn't intuitive), but some work well.
+
+```{r}
+library(MetBrewer)
+
+degas_contin <- met.brewer(name = "Degas", n = 5, type = "continuous")
+
+hh_size_map +
+  scale_fill_gradientn(colors = degas_contin)
+```
 
 # Define study area boundary
 
@@ -180,10 +429,6 @@ boundary <- core_based_statistical_areas() %>%
 ```
 
 If you also want to get region-level data in addition to just the boundaries, you can [use the tidycensus package](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data).
-
-# Distribute growth evenly
-
-Your proposed alternative might involve increasing the population or employment by a constant percentage across all zones.
 
 # Download census tract data
 
@@ -499,11 +744,11 @@ kable(head(final_data))
 
 You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
 
-If you just need the zone boundaries without any of the associated variables, you can use `select()` to drop everything except the geometry column.
+If you just need the zone boundaries without any of the associated variables, you can use `select()` to drop everything except the geometry column and the GEOID (you still want the GEOID so you can identify the tract later).
 
 ```{r}
 zone_boundaries <- zones %>%
-  select(geometry)
+  select(GEOID, geometry)
 ```
 
 If you just want the data without the geometry, you can use `st_drop_geometry()`.
@@ -520,9 +765,19 @@ Histograms and maps are great, but a table can also be really informative.
 
 # Write data to a file
 
-When you have all the zone data how you want it, you should save it to a file so you can use it for subsequent assignments. I recommend saving the tract boundaries and the data [separately](), since the boundaries are the same for all alternatives, but population/employment data might be different, depending on whether your alternative includes land use changes in addition to (or rather than) transportation network changes.
+When you have all the zone data how you want it, you should save it to a file so you can use it for subsequent assignments. I recommend saving the tract boundaries and the data [separately](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#separate-geometry-from-dataset), since the boundaries are the same for all alternatives, but population/employment data might be different, depending on whether your alternative includes land use changes in addition to (or rather than) transportation network changes.
+
+To write spatial data, I suggest saving it to a geojson file using `st_write()`. st_write() can write spatial data to few different file formats, including ESRI shapefiles (useful if you want to bring your data into ArcGIS). I personally like the geojson format because I find it easy to work with.
+
+```{r, results='hide'}
+st_write(zone_boundaries, "zones/boundaries.geojson", append = FALSE)
+```
+
+To write tabular data, it makes sense to save it to a csv file using `write_csv()`.
 
 ```{r}
+write_csv(zone_data, "existing/data/zone_data.csv", append = FALSE)
 
+write_csv(zones_new, "alternative/data/zone_data.csv", append = FALSE)
 ```
 
