@@ -16,29 +16,29 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 
 *Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I'm loading libraries at the top of each code chunk to make it more clear which methods use which packages.*
 
-* **Add households or jobs to a tract**: Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
-* **Apply a ggplot theme:** You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
-* **Calculate an area:** A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
-* **Calculate new variables:** When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
-* **Collapse data:** This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
-* **Convert units:** When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
-* **Create a chloropleth map:** A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
-* **Create a histogram:** A histogram is a helpful way to illustrate the variation in a variable.
-* **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
-* **Define a color scale:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
-* **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
-* **Download census tract data:** You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
-* **Download employment data:** The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
-* **Find census variables:** You'll need to search for the names of the variables you want to include in your analysis.
-* **Format scale labels:** You may not be happy with the default tick-mark labels on your plot. These are easy to customize.
+* [**Add households or jobs to a tract**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#add-households-or-jobs-to-a-tract): Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
+* [**Apply a ggplot theme:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme) You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
+* [**Calculate an area:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-an-area) A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
+* [**Calculate new variables:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-new-variables) When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
+* [**Collapse data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#collapse-data) This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
+* [**Convert units:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#convert-units) When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
+* [**Create a chloropleth map:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map) A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+* [**Create a histogram:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-histogram) A histogram is a helpful way to illustrate the variation in a variable.
+* [**Create an interactive map:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-an-interactive-map) Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
+* [**Customize axes and legends:**] You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
+* [**Define a color ramp:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-a-color-ramp) There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
+* [**Define study area boundary:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary) In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
+* [**Download census tract data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
+* [**Download employment data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data) The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
+* [**Find census variables:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#find-census-variables) You'll need to search for the names of the variables you want to include in your analysis.
 * **Get regional data:** Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
 * **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single dataframe.
 * **List census variable names:** Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
-* **Log-transform a scale:** If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
 * **Organize data columns:** At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
 * **Separate geometry from dataset:** You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
 * **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
 * **Write data to a file:** When you have all the data how you want it, you should save it so you can use it for subsequent assignments. 
+* **Write figures to a file:** Creating maps and charts in RMarkdown is great, but you'll eventually want to save them as files you can include in a report or presentation.
 
 # Add households or jobs to a tract
 
@@ -282,13 +282,13 @@ hist <- ggplot(zones) +
 hist
 ```
 
-You could customize the plot further by [applying a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme).
+You could customize the plot further by [applying a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme) or [customizing the axes].
 
 # Create an interactive map
 
 Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
 
-I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
+I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio - if you push it to GitHub, you'll also be able to view it on your [github.io page](https://gsd-ses-5394-s2022.github.io/Richmond/zones.html){target="_blank"}). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
 
 ```{r, warning=FALSE}
 library(leaflet)
@@ -303,6 +303,123 @@ map <- leaflet(census) %>%
                 highlightOptions(fillColor = "red"))
 
 saveWidget(map, file = 'zones/boundaries.html')
+```
+
+# Customize axes and legends
+
+You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
+
+The `scale_...()` fuctions are what you need there. `scale_x_continuous()` refers to the title, tick marks, and tick labels on the x-axis. `scale_y_continuous()` does the same for the y-axis. `scale_fill_continuous()` refers to the legend of you have a figure that uses fill colors to represent the values of continuous variables. In any of these functions, you'll want to define
+
+Here's a histogram with default settings for both axes:
+
+```{r, message=FALSE, warning=FALSE}
+hist
+```
+
+The legend titles are just the variable names, and ggplot has created and labeled four or five tick marks on each axis. I can change the title of the y-axis by setting the `name` argument in `scale_y_continuous()`. I can specify where I want the tick marks to be by setting the `breaks` argument to a vector of values (a list within a `c()` function). 
+
+```{r, message=FALSE, warning=FALSE}
+hist +
+  scale_y_continuous(name = "Number of census tracts",
+                     breaks = c(0, 20, 40, 60, 80, 100))
+```
+
+There are some disadvantages to typing out all the breaks for the tick marks manually. For one thing, it leave a lot of room for error if there's a typo or something. Since you probably want evenly-spaced tick-marks, you can save yourself some typing by using the `seq()` function. The `seq()` function generates a list of numbers from three arguments, the first number, the last number, and the increment value. So if you want numbers that range from zero to 100, increasing by 10, you could type `seq(0, 100, by=10)`.
+
+```{r, message=FALSE, warning=FALSE}
+hist +
+  scale_y_continuous(name = "Number of census tracts",
+                     breaks = seq(0, 100, by =10))
+```
+
+I can do the same kind of thing for the x-axis, but this time, I'd like the labels to show up as percentages rather than decimals. I can do this by setting the `labels` argument in `scale_x_continuous()`. So this time, when I create the breaks, I'll also save them to a variable called `my_brks` so I can use it as a starting point to create labels. The paste() function pastes together numbers and/or characters to create a new character string. In this case, I'm taking the value in `my_brks`, multiplying it by 100, and adding a percentage sign to the end. `sep = ""` means I don't want a space between the number and the percentage sign.
+
+```{r, message=FALSE, warning=FALSE}
+hist +
+  scale_y_continuous(name = "Number of census tracts",
+                     breaks = seq(0, 100, by =10)) +
+  scale_x_continuous(name = "Percent of households with no vehicles",
+                     breaks = my_brks <- seq(0, 1, by = 0.05),
+                     labels = paste(my_brks * 100, "%", sep = ""))
+```
+
+Some variables have a lot of very small values an a smaller number of larger values. This is common for density, as shown in this histogram.
+
+```{r, include=FALSE}
+census <- census %>%
+  mutate(hh_dens = total_hhsE / as.numeric(tract_area))
+
+dens_hist <- ggplot(census) +
+  geom_histogram(aes(x = hh_dens), color = "lightgray")
+```
+
+```{r, message=FALSE, warning=FALSE}
+dens_hist
+```
+
+In this case, I might find it helpful to log-transform the x-axis by setting `trans = "log"` in the `scale_x_continuous()` function. This doesn't change the data; it just changes how it is displayed.
+
+```{r, message=FALSE, warning=FALSE}
+dens_hist +
+  scale_x_continuous(trans = "log")
+```
+
+With a log-transformed axis, evenly-spaced values for the tick marks wouldn't make sense - you want to values to increase multiplicatively (e.g. 1, 10, 100, 1000...) rather than additively (e.g. 1, 2, 3, 4, 5). I can do that by sequencing powers of 10 ($$10^-2 = 0.1$$, $$10^-1 = 1$$, $$10^0 = 1$$, $$10^1 = 10$$, $$10^2 = 100$$, and so on).
+
+```{r, message=FALSE, warning=FALSE}
+dens_hist +
+  scale_x_continuous(trans = "log",
+                     breaks = 10^seq(-2, 3, by = 1))
+```
+
+That makes nice, evenly-spaced intervals, but they're in scientific notation. We can use `formatC()` to format them. `format = "d"` means I want to show the numbers as integers and big.mark = "," means I want to use a comma to separate thousands.
+
+```{r, message=FALSE, warning=FALSE}
+dens_hist +
+  scale_x_continuous(trans = "log",
+                     breaks = log_brks <- 1 * 10^seq(-1, 4, by = 1),
+                     labels = formatC(log_brks, format = "d", big.mark = ","))
+```
+
+You'll probably find `scale_fill_continuous()` useful for the legend on a chloropleth map, and it works the same way. Here's a chloropleth map with its default legend.
+
+```{r}
+hh_size_map
+```
+
+And here it is with more useful labels on the legend (I'm not advising you use this many tick marks on a color ramp legend - I'm just showing you how to do it).
+
+I'm using `formatC()` to control the number of decimal places to display (`format = "f"` means I want the number to be displayed as a decimal).
+
+```{r}
+hh_size_map +
+  scale_fill_continuous(name = "Average household size",
+                        breaks = size_brks <- seq(1.5, 3.25, by = 0.25),
+                        labels = paste(formatC(size_brks, 
+                                               format="f",
+                                               digits=2), 
+                                       "People per household"))
+```
+
+I can also log-transform a color-ramp. Here's a chloropleth map of residential density.
+
+```{r, include=FALSE}
+dens_map <- ggplot(census) +
+  geom_sf(aes(fill = hh_dens), color=NA)
+```
+
+```{r}
+dens_map
+```
+
+It's hard to see much variation in the low-density areas. But if we log-transform the scale, the variation becomes more apparent. You'll notice I'm using the exact same arguments in scale_fill_continuous that I used above when I log-transformed the x-axis in a histogram.
+
+```{r}
+dens_map +
+  scale_fill_continuous(trans = "log",
+                     breaks = log_brks <- 1 * 10^seq(-1, 4, by = 1),
+                     labels = formatC(log_brks, format = "d", big.mark = ","))
 ```
 
 
@@ -691,10 +808,12 @@ At some point, you'll find you have more columns in your dataframe that you need
 
 Here are the first few rows of a dataframe with a 57 columns:
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 library(knitr)
+library(kableExtra)
 
-kable(head(zones))
+kable(head(zones)) %>%
+  scroll_box(width = "100%", height = "500px")
 ```
 
 The only ones I want to keep are these 14:
@@ -718,7 +837,7 @@ The only ones I want to keep are these 14:
 
 That's the order they currently appear in, but for whatever reason, I'd like the employment variables to come first.
 
-```{r}
+```{r, message=FALSE, warning=FALSE}
 final_data <- zones %>%
   select(GEOID, 
          total_emp,
@@ -737,7 +856,8 @@ final_data <- zones %>%
          inc_quint_4,
          inc_quint_5)
 
-kable(head(final_data))
+kable(head(final_data)) %>%
+  scroll_box(width = "100%", height = "500px")
 ```
 
 # Separate geometry from dataset
@@ -758,10 +878,40 @@ zone_data <- zones %>%
   st_drop_geometry()
 ```
 
-
 # Summarize tract statistics
 
-Histograms and maps are great, but a table can also be really informative.
+Histograms and maps are great, but a table can also be really informative. You can calculate statistics individually and then just type them into a table in your report document. Here's are the mean and standard deviation for the average household size across all census tracts (`na.rm = TRUE` means R can ignore any missing values)
+
+```{r}
+mean(census$avg_hh_size, na.rm = TRUE)
+
+sd(census$avg_hh_size, na.rm = TRUE)
+```
+
+You can also use summary() to get a quick set of summary statistics.
+
+```{r}
+summary(census$avg_hh_size)
+```
+
+You can also use the `summarize()` function to create a quick table of summary statistics for a couple of variables. This isn't the only possible way to do this.
+
+First, I'll use pivot_longer to get the variables I want into separate rows, then I'll group by variable name and use summarize to calculate summary statistics.
+
+```{r, include=FALSE}
+zone_data <- read_csv("existing/data/zone_data.csv")
+```
+
+```{r}
+zone_data %>%
+  pivot_longer(cols=c(total_emp, total_hhsE),
+               names_to = "Variable",
+               values_to = "value") %>%
+  group_by(Variable) %>%
+  summarize(Average = mean(value, na.rm=TRUE),
+            `Standard deviation` = sd(value, na.rm=TRUE),
+            Median = median(value, median(value, na.rm=TRUE)))
+```
 
 # Write data to a file
 
@@ -781,3 +931,20 @@ write_csv(zone_data, "existing/data/zone_data.csv", append = FALSE)
 write_csv(zones_new, "alternative/data/zone_data.csv", append = FALSE)
 ```
 
+# Write figures to a file
+
+Creating maps and charts in RMarkdown is great, but you'll eventually want to save them as files you can include in a report or presentation. ggsave() will save the most recent plot to a filename you specify. That means you can call ggsave() immediately after plotting. You can specify the size of the image in inches (`units = "in"`), centimeters (`units = "cm"`), milimeters (`units = "mm"`), or pixels (`units = "px"`). You can also set the image resolution using the dpi argument, which can be a number (the number of dots per square inch) or one of three strings: `"retina"` (320 dpi), `"print"` (300 dpi - this the default), or `"screen"` (72 dpi). ggsave() can save to most common image file types. There is no need to specify a resolution if you want it to be 300 dpi (because that's the default) or if you're saving to a vector file type (pdf or svg, for example).
+
+```{r}
+hh_size_map
+
+ggsave("images/hh_sizes_existing.png",
+       height = 4.25, width = 6.5, units = "in")
+```
+
+If you don't want to save the most recent plot, you can also specify the plot directly.
+
+```{r}
+ggsave("images/hh_density_existing.png", plot = dens_map,
+       height = 4.25, width = 6.5, units = "in")
+```
