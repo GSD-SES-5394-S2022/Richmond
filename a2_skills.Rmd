@@ -16,25 +16,25 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 
 *Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I'm loading libraries at the top of each code chunk to make it more clear which methods use which packages.*
 
-* [**Add households or jobs to a tract**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#add-households-or-jobs-to-a-tract): Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
-* [**Apply a ggplot theme:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme) You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
-* [**Calculate an area:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-an-area) A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
-* [**Calculate new variables:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-new-variables) When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
-* [**Collapse data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#collapse-data) This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
-* [**Convert units:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#convert-units) When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
-* [**Create a chloropleth map:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map) A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
-* [**Create a histogram:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-histogram) A histogram is a helpful way to illustrate the variation in a variable.
-* [**Create an interactive map:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-an-interactive-map) Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
-* [**Customize axes and legends:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#customize-axes-and-legends) You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
-* [**Define a color ramp:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-a-color-ramp) There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
-* [**Define study area boundary:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary) In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
-* [**Download census tract data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
-* [**Download employment data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data) The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
-* [**Find census variables:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#find-census-variables) You'll need to search for the names of the variables you want to include in your analysis.
-* [**Get regional data:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data) Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
-* [**Join two data frames:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#join-two-data-frames) If you have employment data in one dataframe and population data in another, you'll want to combine them into a single dataframe.
-* [**List census variable names:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names) Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
-* [**Organize data columns:**](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#organize-data-columns) At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
+* **Add households or jobs to a tract**: Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
+* **Apply a ggplot theme:** You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
+* **Calculate an area:** A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
+* **Calculate new variables:** When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
+* **Collapse data:** This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
+* **Convert units:** When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
+* **Create a chloropleth map:** A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+* **Create a histogram:** A histogram is a helpful way to illustrate the variation in a variable.
+* **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
+* **Customize axes and legends:** You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
+* **Define a color ramp:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
+* **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
+* **Download census tract data:** You'll need to download several tract-level variables from the census. You'll find the `tidycensus` package super useful for this.
+* **Download employment data:** The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.
+* **Find census variables:** You'll need to search for the names of the variables you want to include in your analysis.
+* **Get regional data:** Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
+* **Join two data frames:** If you have employment data in one dataframe and population data in another, you'll want to combine them into a single dataframe.
+* **List census variable names:** Once you've identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.
+* **Organize data columns:** At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
 * **Separate geometry from dataset:** You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.
 * **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
 * **Write data to a file:** When you have all the data how you want it, you should save it so you can use it for subsequent assignments. 
@@ -660,10 +660,6 @@ Many tables are cross-tabulations that present the number of people, homes, or h
 
 **\*** *The first argument (`2019`) indicates that you want the variables that are available for 2019 and the second argument (`"acs5"`) indicates that you want variables that are included in the 5-year sample of the American Community Survey. The 5-year sample is from survey respondents pooled over a 5-year period. An alternative is `"acs1"`, which would give you just the households who completed the survey in 2019 (which is a much smaller sample, so those estimates would have more uncertainty associated with them). You could also specify `"sf1"` instead of `"acs5"` or `"acs1"` if you wanted data from the decennial census. The decennial census is meant to include everyone, so there is no sampling error, but fewer variables are available.*
 
-# Format scale labels
-
-You may not be happy with the default tick-mark labels on your plot. These are easy to customize.
-
 # Get regional data
 
 Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).
@@ -796,11 +792,6 @@ vars <- c(total_hhs = 'B08203_001',
           inc_btw_150k_200k = 'B19001_016',
           inc_gt_200k = 'B19001_017')
 ```
-
-
-# Log-transform a color scale
-
-If you find that your chloropleth map doesn't show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.
 
 # Organize data columns
 

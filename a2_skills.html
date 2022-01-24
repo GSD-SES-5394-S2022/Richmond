@@ -225,11 +225,9 @@
 <li><a href="#download-census-tract-data">Download census tract data</a></li>
 <li><a href="#download-employment-data">Download employment data</a></li>
 <li><a href="#find-census-variables">Find census variables</a></li>
-<li><a href="#format-scale-labels">Format scale labels</a></li>
 <li><a href="#get-regional-data">Get regional data</a></li>
 <li><a href="#join-two-data-frames">Join two data frames</a></li>
 <li><a href="#list-census-variable-names">List census variable names</a></li>
-<li><a href="#log-transform-a-color-scale">Log-transform a color scale</a></li>
 <li><a href="#organize-data-columns">Organize data columns</a></li>
 <li><a href="#separate-geometry-from-dataset">Separate geometry from dataset</a></li>
 <li><a href="#summarize-tract-statistics">Summarize tract statistics</a></li>
@@ -251,25 +249,25 @@
 <p>The followings skills will be useful for Analysis Assignment 2. They are listed here alphabetically. I don’t want to bias your thinking about which ones you’ll end up using and in what order. But this page will be a useful reference.</p>
 <p><em>Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I’m loading libraries at the top of each code chunk to make it more clear which methods use which packages.</em></p>
 <ul>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#add-households-or-jobs-to-a-tract"><strong>Add households or jobs to a tract</strong></a>: Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme"><strong>Apply a ggplot theme:</strong></a> You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-an-area"><strong>Calculate an area:</strong></a> A lot of the variables you’re likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you’ll need to calculate the area of each zone (for example, in square miles or square kilometers).</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-new-variables"><strong>Calculate new variables:</strong></a> When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#collapse-data"><strong>Collapse data:</strong></a> This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#convert-units"><strong>Convert units:</strong></a> When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map"><strong>Create a chloropleth map:</strong></a> A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-histogram"><strong>Create a histogram:</strong></a> A histogram is a helpful way to illustrate the variation in a variable.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-an-interactive-map"><strong>Create an interactive map:</strong></a> Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it’s a useful way to find the GEOID for a zone in a specific location.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#customize-axes-and-legends"><strong>Customize axes and legends:</strong></a> You’ll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-a-color-ramp"><strong>Define a color ramp:</strong></a> There are several predefined color palettes you can use, and some useful functions you can use to select colors in <code>ggplot</code>.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary"><strong>Define study area boundary:</strong></a> In this class, your study area is a metropolitan statistical area. You can use the <code>tigris</code> or <code>tidycensus</code> package to get the boundary of your study area. This can be especially useful if your study area includes many counties.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data"><strong>Download census tract data:</strong></a> You’ll need to download several tract-level variables from the census. You’ll find the <code>tidycensus</code> package super useful for this.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data"><strong>Download employment data:</strong></a> The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#find-census-variables"><strong>Find census variables:</strong></a> You’ll need to search for the names of the variables you want to include in your analysis.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data"><strong>Get regional data:</strong></a> Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#join-two-data-frames"><strong>Join two data frames:</strong></a> If you have employment data in one dataframe and population data in another, you’ll want to combine them into a single dataframe.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names"><strong>List census variable names:</strong></a> Once you’ve identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.</li>
-<li><a href="https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#organize-data-columns"><strong>Organize data columns:</strong></a> At some point, you’ll find you have more columns in your dataframe that you need. You can use the <code>select()</code> function to delete variables you don’t need and also to reorder columns.</li>
+<li><strong>Add households or jobs to a tract</strong>: Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.</li>
+<li><strong>Apply a ggplot theme:</strong> You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.</li>
+<li><strong>Calculate an area:</strong> A lot of the variables you’re likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you’ll need to calculate the area of each zone (for example, in square miles or square kilometers).</li>
+<li><strong>Calculate new variables:</strong> When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.</li>
+<li><strong>Collapse data:</strong> This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.</li>
+<li><strong>Convert units:</strong> When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.</li>
+<li><strong>Create a chloropleth map:</strong> A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.</li>
+<li><strong>Create a histogram:</strong> A histogram is a helpful way to illustrate the variation in a variable.</li>
+<li><strong>Create an interactive map:</strong> Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it’s a useful way to find the GEOID for a zone in a specific location.</li>
+<li><strong>Customize axes and legends:</strong> You’ll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.</li>
+<li><strong>Define a color ramp:</strong> There are several predefined color palettes you can use, and some useful functions you can use to select colors in <code>ggplot</code>.</li>
+<li><strong>Define study area boundary:</strong> In this class, your study area is a metropolitan statistical area. You can use the <code>tigris</code> or <code>tidycensus</code> package to get the boundary of your study area. This can be especially useful if your study area includes many counties.</li>
+<li><strong>Download census tract data:</strong> You’ll need to download several tract-level variables from the census. You’ll find the <code>tidycensus</code> package super useful for this.</li>
+<li><strong>Download employment data:</strong> The Longitudinal Employer-Household Dynamica (LEHD) dataset is a great source of census-block level employment data by industry.</li>
+<li><strong>Find census variables:</strong> You’ll need to search for the names of the variables you want to include in your analysis.</li>
+<li><strong>Get regional data:</strong> Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).</li>
+<li><strong>Join two data frames:</strong> If you have employment data in one dataframe and population data in another, you’ll want to combine them into a single dataframe.</li>
+<li><strong>List census variable names:</strong> Once you’ve identified the census variable you want to include in your analysis, you can create a list of them in which you define your own variable names.</li>
+<li><strong>Organize data columns:</strong> At some point, you’ll find you have more columns in your dataframe that you need. You can use the <code>select()</code> function to delete variables you don’t need and also to reorder columns.</li>
 <li><strong>Separate geometry from dataset:</strong> You might have situations where you only need the zone boundaries, or you only need the zone data without the boundaries. You can separate them out before you save them.</li>
 <li><strong>Summarize tract statistics:</strong> Histograms and maps are great, but a table can also be really informative.</li>
 <li><strong>Write data to a file:</strong> When you have all the data how you want it, you should save it so you can use it for subsequent assignments.</li>
@@ -683,10 +681,6 @@
 <p>Many tables are cross-tabulations that present the number of people, homes, or households in each combination of two categories. Many values can be found in multiple tables. For example, you can find the total number of workers who commute to work by car in B08006 (Sex of worker by means of transportation to work) and B08101 (Means of transportation to work by age).</p>
 <p><strong>*</strong> <em>The first argument (<code>2019</code>) indicates that you want the variables that are available for 2019 and the second argument (<code>&quot;acs5&quot;</code>) indicates that you want variables that are included in the 5-year sample of the American Community Survey. The 5-year sample is from survey respondents pooled over a 5-year period. An alternative is <code>&quot;acs1&quot;</code>, which would give you just the households who completed the survey in 2019 (which is a much smaller sample, so those estimates would have more uncertainty associated with them). You could also specify <code>&quot;sf1&quot;</code> instead of <code>&quot;acs5&quot;</code> or <code>&quot;acs1&quot;</code> if you wanted data from the decennial census. The decennial census is meant to include everyone, so there is no sampling error, but fewer variables are available.</em></p>
 </div>
-<div id="format-scale-labels" class="section level1">
-<h1>Format scale labels</h1>
-<p>You may not be happy with the default tick-mark labels on your plot. These are easy to customize.</p>
-</div>
 <div id="get-regional-data" class="section level1">
 <h1>Get regional data</h1>
 <p>Your analysis will be at the tract level, but you might want to calculate some regional-level statistics as well - either because you want to just give a description of the region as a whole in your report or because you want to calculate a variable that reports tract-level statistics to regional statistics (e.g. income relative to the regional median).</p>
@@ -739,8 +733,6 @@
   |                                                                            
   |==                                                                    |   3%
   |                                                                            
-  |==                                                                    |   4%
-  |                                                                            
   |===                                                                   |   4%
   |                                                                            
   |===                                                                   |   5%
@@ -761,9 +753,13 @@
   |                                                                            
   |========                                                              |  11%
   |                                                                            
+  |========                                                              |  12%
+  |                                                                            
   |=========                                                             |  12%
   |                                                                            
   |=========                                                             |  13%
+  |                                                                            
+  |=========                                                             |  14%
   |                                                                            
   |==========                                                            |  14%
   |                                                                            
@@ -783,13 +779,19 @@
   |                                                                            
   |==============                                                        |  20%
   |                                                                            
+  |==============                                                        |  21%
+  |                                                                            
   |===============                                                       |  21%
+  |                                                                            
+  |===============                                                       |  22%
   |                                                                            
   |================                                                      |  22%
   |                                                                            
   |================                                                      |  23%
   |                                                                            
   |=================                                                     |  24%
+  |                                                                            
+  |=================                                                     |  25%
   |                                                                            
   |==================                                                    |  25%
   |                                                                            
@@ -807,15 +809,21 @@
   |                                                                            
   |======================                                                |  31%
   |                                                                            
+  |======================                                                |  32%
+  |                                                                            
   |=======================                                               |  32%
   |                                                                            
   |=======================                                               |  33%
   |                                                                            
   |========================                                              |  34%
   |                                                                            
+  |========================                                              |  35%
+  |                                                                            
   |=========================                                             |  35%
   |                                                                            
   |=========================                                             |  36%
+  |                                                                            
+  |==========================                                            |  36%
   |                                                                            
   |==========================                                            |  37%
   |                                                                            
@@ -829,17 +837,23 @@
   |                                                                            
   |=============================                                         |  41%
   |                                                                            
+  |=============================                                         |  42%
+  |                                                                            
   |==============================                                        |  42%
   |                                                                            
   |==============================                                        |  43%
   |                                                                            
   |===============================                                       |  44%
   |                                                                            
+  |===============================                                       |  45%
+  |                                                                            
   |================================                                      |  45%
   |                                                                            
   |================================                                      |  46%
   |                                                                            
   |=================================                                     |  47%
+  |                                                                            
+  |=================================                                     |  48%
   |                                                                            
   |==================================                                    |  48%
   |                                                                            
@@ -863,6 +877,8 @@
   |                                                                            
   |========================================                              |  57%
   |                                                                            
+  |========================================                              |  58%
+  |                                                                            
   |=========================================                             |  58%
   |                                                                            
   |=========================================                             |  59%
@@ -873,19 +889,21 @@
   |                                                                            
   |===========================================                           |  61%
   |                                                                            
+  |===========================================                           |  62%
+  |                                                                            
   |============================================                          |  62%
   |                                                                            
   |============================================                          |  63%
   |                                                                            
   |=============================================                         |  64%
   |                                                                            
-  |=============================================                         |  65%
-  |                                                                            
   |==============================================                        |  65%
   |                                                                            
   |==============================================                        |  66%
   |                                                                            
   |===============================================                       |  67%
+  |                                                                            
+  |===============================================                       |  68%
   |                                                                            
   |================================================                      |  68%
   |                                                                            
@@ -894,6 +912,8 @@
   |=================================================                     |  70%
   |                                                                            
   |==================================================                    |  71%
+  |                                                                            
+  |==================================================                    |  72%
   |                                                                            
   |===================================================                   |  72%
   |                                                                            
@@ -905,7 +925,11 @@
   |                                                                            
   |=====================================================                 |  76%
   |                                                                            
+  |======================================================                |  76%
+  |                                                                            
   |======================================================                |  77%
+  |                                                                            
+  |======================================================                |  78%
   |                                                                            
   |=======================================================               |  78%
   |                                                                            
@@ -915,19 +939,21 @@
   |                                                                            
   |=========================================================             |  81%
   |                                                                            
+  |=========================================================             |  82%
+  |                                                                            
   |==========================================================            |  82%
   |                                                                            
   |==========================================================            |  83%
   |                                                                            
   |===========================================================           |  84%
   |                                                                            
-  |===========================================================           |  85%
-  |                                                                            
   |============================================================          |  85%
   |                                                                            
   |============================================================          |  86%
   |                                                                            
   |=============================================================         |  87%
+  |                                                                            
+  |=============================================================         |  88%
   |                                                                            
   |==============================================================        |  88%
   |                                                                            
@@ -944,6 +970,8 @@
   |=================================================================     |  93%
   |                                                                            
   |==================================================================    |  94%
+  |                                                                            
+  |==================================================================    |  95%
   |                                                                            
   |===================================================================   |  95%
   |                                                                            
@@ -1103,10 +1131,6 @@
 <span id="cb55-20"><a href="#cb55-20" aria-hidden="true" tabindex="-1"></a>          <span class="at">inc_btw_125k_150k =</span> <span class="st">&#39;B19001_015&#39;</span>,</span>
 <span id="cb55-21"><a href="#cb55-21" aria-hidden="true" tabindex="-1"></a>          <span class="at">inc_btw_150k_200k =</span> <span class="st">&#39;B19001_016&#39;</span>,</span>
 <span id="cb55-22"><a href="#cb55-22" aria-hidden="true" tabindex="-1"></a>          <span class="at">inc_gt_200k =</span> <span class="st">&#39;B19001_017&#39;</span>)</span></code></pre></div>
-</div>
-<div id="log-transform-a-color-scale" class="section level1">
-<h1>Log-transform a color scale</h1>
-<p>If you find that your chloropleth map doesn’t show a lot of variation, you could try log-transforming the scale to emphasize variation in low values and deemphasize a small number of high values.</p>
 </div>
 <div id="organize-data-columns" class="section level1">
 <h1>Organize data columns</h1>
