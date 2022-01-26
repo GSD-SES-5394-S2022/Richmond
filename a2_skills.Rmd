@@ -81,7 +81,7 @@ hist <- ggplot(zones) +
   geom_histogram(aes(x = pct_no_veh))
 ```
 
-Here's a histogram with the default theme (see how you would have created it [here](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-histogram)).
+Here's a histogram with the default theme (see how you would have created it in the "Create a histogram" topic).
 
 ```{r, message=FALSE, warning=FALSE}
 hist
@@ -121,7 +121,7 @@ hist +
   theme_tufte()
 ```
 
-For maps, `theme_map()` can be a good choice. If you've [created a chloropleth map](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map) called `hh_size_map`, you could apply `theme_map()` like this.
+For maps, `theme_map()` can be a good choice. If you've [created a chloropleth map](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#create-a-chloropleth-map) called `hh_size_map`, you could apply `theme_map()` like this. 
 
 ```{r, include=FALSE}
 library(sf)
@@ -288,7 +288,7 @@ You could customize the plot further by [applying a theme](https://gsd-ses-5394-
 
 Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
 
-I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio - if you push it to GitHub, you'll also be able to view it on your [github.io page](https://gsd-ses-5394-s2022.github.io/Richmond/zones.html){target="_blank"}). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
+I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio - if you push it to GitHub, you'll also be able to view it on your [github.io page](https://gsd-ses-5394-s2022.github.io/Richmond/zones/boundaries.html){target="_blank"}). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
 
 ```{r, warning=FALSE}
 library(leaflet)
@@ -545,7 +545,7 @@ boundary <- core_based_statistical_areas() %>%
   filter(GEOID == "40060")
 ```
 
-If you also want to get region-level data in addition to just the boundaries, you can [use the tidycensus package](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#get-regional-data).
+If you also want to get region-level data in addition to just the boundaries, you can use the tidycensus package (see the "Get Regional Data" topic).
 
 # Download census tract data
 
@@ -668,7 +668,7 @@ The example here incorporates some of the skills covered in other sections.
 
 In this example, I want to have some tract-level variables that indicate how many households are in each income quintile, so I'll calculate the regional 20th, 40th, 60th, and 80th percentiles to use as thresholds.
 
-First I'll [create a list of variables](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names) indicating the number of households in each of 16 income categories. 
+First I'll create a list of variables indicating the number of households in each of 16 income categories (see the "List census variable names" topic).
 
 ```{r}
 vars <- c(inc_lt_10k = 'B19001_002',
@@ -689,17 +689,15 @@ vars <- c(inc_lt_10k = 'B19001_002',
           inc_gt_200k = 'B19001_017')
 ```
 
-Then I'll [download those variables](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) for all the core-based statistical areas in United States (`geography = metropolitan statistical area/micropolitan statistical area"` instead of `geography = "tract"`). I am *not* setting `output = 'wide'` because in this case I actually *do* want each variable in its own row (there will be a column with the variable name and column called `estimate` with the value of each variable). I'm setting `summary_var = 'B19001_001'` because that's the total number of households, and I want to calculate what percent of total households fall in each category.
+Then I'll download those variables (see the "Download Census tract data" topic)  for all the core-based statistical areas in United States (`geography = metropolitan statistical area/micropolitan statistical area"` instead of `geography = "tract"`). I am *not* setting `output = 'wide'` because in this case I actually *do* want each variable in its own row (there will be a column with the variable name and column called `estimate` with the value of each variable). I'm setting `summary_var = 'B19001_001'` because that's the total number of households, and I want to calculate what percent of total households fall in each category.
 
-If you need the spatial extent of the study area, you could just add `geometry = TRUE` to the `get_acs()` function instead of [getting the boundaries through the `tigris` package](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary).
+If you need the spatial extent of the study area, you could just add `geometry = TRUE` to the `get_acs()` function instead of [getting the boundaries through the `tigris` package] (see the "Define study area boundary" topic for how to get the boundary from the Tigris package). I'm setting `geometry = FALSE` in this case, assuming I don't need the study area boundary data.
 
 After a pipe (`%>%`) I filter the data to only include my study area (I'm using Richmond in this example - the GEOID is 40060).
 
-After another pipe, I [create a variable](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#calculate-new-variables) with the percent of households in each category, and then I use the `cumsum()` function to calculate a cumulative percentage. Finally, I [delete the columns](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#organize-data-columns) I don't need, keeping only the cumulative percentage and variable names.
+After another pipe, I create a variable (see the "Calculate new variables" topic) with the percent of households in each category, and then I use the `cumsum()` function to calculate a cumulative percentage. Finally, I delete the columns I don't need (see the "Organize data columns" topic), keeping only the cumulative percentage and variable names.
 
-Now I can [print the table](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#summarize-tract-statistics).
-
-```{r, message=FALSE}
+```{r, message=FALSE, results='hide'}
 library(tidycensus)
 library(tidyverse)
 library(knitr)
@@ -708,21 +706,24 @@ region_inc <- get_acs(
   geography = "metropolitan statistical area/micropolitan statistical area",
   variables = vars,
   summary_var = 'B19001_001',
-  geometry = TRUE) %>%
+  geometry = FALSE) %>%
   filter(GEOID == "40060") %>%
   mutate(pct = estimate / summary_est) %>%
   mutate(cumul_pct = cumsum(pct)) %>%
   select(variable, cumul_pct)
+```
 
+Now I can print the table (see the "Summarize tract statistics" topic).
+
+```{r}
 kable(region_inc, digits=2)
 ```
 
 From the table above, I can see that 20 percent of households have incomes below \$30,000 per year, 40 percent have incomes below \$60,000 per year, 60 percent (or close enough) have incomes below \$100,000, and 80 percent have incomes below \$150,000 per year. These are thresholds I could use to define broader income categories for my tract-level data. 
 
-
 # Join two data frames
 
-If you have [employment data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data) in one dataframe and [population data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) in another, you'll want to combine them into a single dataframe.
+If you have employment data in one dataframe (see the "Download employment data" topic) and population data in another (see the "Download census tract data" topic), you'll want to combine them into a single dataframe.
 
 In these examples, I know my population data only includes tracts in my study area because I filtered to to my study area boundary. My employment data is for the whole state. I'll do a left join, with the population data on the left (i.e. listed first), which wil drop all the rows of the employment data that aren't include in my population data.
 
@@ -739,7 +740,7 @@ zones <- census %>%
 
 # List census variable names
 
-Once you've [identified the census variable you want to include in your analysis](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#find-census-variables), you can create a list of them. The function `c()` lets you list a bunch of items so you can pass them into another function (for example, the [`get_acs()`](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) function) as a single argument. You could just list all the variable names you've identified like this:
+Once you've identified the census variable you want to include in your analysis (see the "Find census variables" topic), you can create a list of them. The function `c()` lets you list a bunch of items so you can pass them into another function (for example, the `get_acs()` function - see the "Download census tract data" topic) as a single argument. You could just list all the variable names you've identified like this:
 
 ```{r}
 vars <- c('B08203_001',
