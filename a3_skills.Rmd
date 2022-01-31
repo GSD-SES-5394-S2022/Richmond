@@ -80,23 +80,27 @@ q <- opq(bbox = richmond_bbox) %>%
 
 If the alternative you want to evaluate involves changes to the road network, you'll need to save a copy of the existing OpenStreetMap network you downloaded (see the "Download and OpenStreetMap network" topic), and prepare it for editing (see the "Prepare an OpenStreetMap network for editing" topic).
 
-You'll be editing using a software package called JOSM (Java OpenStreetMap Editor). You already have a copy of it in your project directory (which I downloaded from [here](https://josm.openstreetmap.de/wiki/Download){target="_blank"} and added to your GitHub repo). If you are working on a fairly small study area, you can just open it by double-clicking on it (this would be fine for Buffalo, I think). If you are working on a larger region, you'll probably need to increase the memory allocated to Java when you open it, so you should open it from the command line.
+You'll be editing using a Java application called JOSM (Java OpenStreetMap Editor). To run JOSM, you'll need to have Java SDK 11 installed on your computer. You can download it for free [here](https://www.oracle.com/java/technologies/downloads/#java11){target="_blank"} (it's possible you already have it on your computer if you've used the R5R package before).
 
-[Here's a little video](https://harvard.zoom.us/rec/share/vwQJatxnxypwI0hvgfD5l8zJbhqIeRa3jp_DbCzu9cW45zYD8mYsrAb8gRnjHo4I.2NVrqt3owFoGPLz2){target="_blank"} that shows you how to open the command line from a PC.
+You'll run JOSM from a JAR file that you can find in your GitHub repo (also downloadable from [here](https://josm.openstreetmap.de/){target="_blank"}). If you are working on a fairly small study area, you can just open it by double-clicking on it (this would be fine for Buffalo, I think). If you are working on a larger region, you'll probably need to increase the memory allocated to Java when you open it, so you should open it from the command line.
 
-And here's one that shows you how to open the command line from a Mac.
+Once you've got the command line open, navigate to the folder where the JOSM jar file is saved (it's in the networks subfolder of your alternative folder of your GitHub repo / RStudio project directory). To do this, type `cd` followed by a space, then type the path to the networks subfolder the alternative folder in your GitHub repo. 
 
-Once you've got the command line open, navigate to the folder where the JOSM jar file is saved. To do this, type `cd` followed by a space, then type the path to the networks subfolder the alternative folder in your GitHub repo. On a PC, it will probably be something like this:
+On a PC, if your study area is Richmond, it will probably be something like this:
 
 `cd Documents\GitHub\Richmond\alternative\networks`
+
+On a Mac, if will probably be something like this: 
+
+`cd Richmond/alternative/networks`
 
 Then type:
 
 `java -jar -Xmx2g josm-tested.jar`
 
-The `-Xmx2g` allocates two gigabytes of memory to Java. 
+`java` means your opening an application with Java, `-jar` means its a JAR file, `-Xmx2g` allocates two gigabytes of memory to Java, and `josm-tested.jar` is the filename of the application you're opening. 
 
-This will open JOSM on your computer. Here's a video showing what to do from there.
+This will open JOSM on your computer. [Here's a video showing how to open JOSM on a Mac and what to do from there](https://harvard.zoom.us/rec/share/JEdj3o20jzz-rgA9sDGGBB642Ex02Fk2uFiujfs8NECADAhFhhXzIuA-fZBXu7fm.BrjvVQYzupLBN5Ac?startTime=1643383218000){target="_blank"}. And here's the same thing on a PC.
 
 # Edit transit route frequency
 
