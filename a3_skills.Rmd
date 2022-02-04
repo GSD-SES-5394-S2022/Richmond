@@ -20,8 +20,6 @@ The followings skills will be useful for Analysis Assignment 3. They are listed 
 
 * **Convert an OSM file to a PBF file**:
 
-* **Delete a transit route**
-
 * **Download an OpenStreetMap network**: You'll need to represent the existing roadway network in a format that will allow you to calculate travel times. OpenStreetMaps is helpful for this.
 
 * **Download a GTFS feed**:
@@ -46,7 +44,11 @@ The followings skills will be useful for Analysis Assignment 3. They are listed 
 
 # Convert an OSM file to a PBF file
 
-# Delete a transit route
+You will be downloading OpenStreetMap data (and potentially editing it) in the \*.osm file format. To use it with the the the r5r package, you'll need to convert it to a \*.pbf file (which is just a compressed version of the \*.osm file). 
+
+On a PC, you can use the osmconvert executable that you'll find in your GitHub repo to do that. [Here's a video that shows how](https://harvard.zoom.us/rec/play/wQDI6cjRC98bESyWY9sWk0HaEaBm0gSfvajrd2VuoqOUhavIDB-PKrf8rczEn0iQBqVcIGRNrxnuJSL2.SFOMASsvYsb7kTR3?autoplay=true&startTime=1643906867000){target="_blank"}.
+
+On a Mac, you can use a program called osmium, which you'll need to install using Homebrew (which likely means you'll also need to install Homebrew). [Here's a video that shows how to do all that](https://harvard.zoom.us/rec/play/vw9e3HQzIZt5ki-jHUobTkL39B-SlXOKWVv7XG73xCbwODK7-PdxsxKcJblgA3F87wufYMcC2nY22rGh.Odv9oMq-y-2oDJMC?autoplay=true&startTime=1643665132000){target="_blank"}.
 
 # Download an OpenStreetMap network
 
@@ -76,6 +78,14 @@ q <- opq(bbox = richmond_bbox) %>%
 
 # Download a GTFS feed
 
+You'll need to download data on the transit network in the GTFS format. There are a couple places you can look for that data.
+
+[OpenMobilityData](transitfeeds.com){target="_blank"} maintains a pretty good archive of GTFS feeds for cities throughout the world. You'll likely by able to find the GTFS feeed for the transit agency serving your study area there. Download it, and save it to the `networks` subfolder in the `existing` folder of your project directory. It will be a zipped file. No need to unzip (what I really mean is, please don't unzip it).
+
+You can also use the tidytransit package to find the GTFS feed you want. once you've loaded the package (`library(tidytransit)`), you can type `View(feedlist)` in your console. You'll be able to search for the name of the city or the name of the transit agency. `feedlist` has a column called `url_d` that you can use to download the GTFS feed. You can paste the url from that column into a web browser to download the file.
+
+If you can't find the GTFS feed you need in the tidytransit feedlist or the OpenMobilityData site, you could also look at the transit agency's website. It will often be on a page called something like "Data for developers."
+
 # Edit an OpenStreetMap network
 
 If the alternative you want to evaluate involves changes to the road network, you'll need to save a copy of the existing OpenStreetMap network you downloaded (see the "Download and OpenStreetMap network" topic), and prepare it for editing (see the "Prepare an OpenStreetMap network for editing" topic).
@@ -100,11 +110,20 @@ Then type:
 
 `java` means your opening an application with Java, `-jar` means its a JAR file, `-Xmx2g` allocates two gigabytes of memory to Java, and `josm-tested.jar` is the filename of the application you're opening. 
 
-This will open JOSM on your computer. [Here's a video showing how to open JOSM on a Mac and what to do from there](https://harvard.zoom.us/rec/share/JEdj3o20jzz-rgA9sDGGBB642Ex02Fk2uFiujfs8NECADAhFhhXzIuA-fZBXu7fm.BrjvVQYzupLBN5Ac?startTime=1643383218000){target="_blank"}. And here's the same thing on a PC.
+This will open JOSM on your computer. [Here's a video showing how to open JOSM on a Mac and what to do from there](https://harvard.zoom.us/rec/play/Jec7xZmMMMZ7cGTBCBCS0CJ0JPUxsCIZnlk43bERsicyCIZ68VcptBYPwgdv7mncLoKESvHwgs95zgl3.xcL9YPqQky9evdma?autoplay=true&startTime=1643383218000){target="_blank"}. [And here's the same thing on a PC](https://harvard.zoom.us/rec/play/1uCQQa5QYUVgcLVSB_cahuJR54AK4OyFYayVQG6wLMezbMeychrpN0zLbdl0UDwv92_LCF-2OlezjJVl.64uzqJOk4N-W15IR?autoplay=true&startTime=1643660096000){target="_blank"}.
 
 # Edit transit route frequency
 
-# Edit transit route speed
+If the alternative you're proposing involves changes in the frequency of one or more transit routes, you can use the scenRios package to edit the frequency of a transit route in a GTFS feed.
+
+First, you'll need to load the feed into your R environment using the `read_gtfs()` function in the `tidytransit` package.
+
+```{r}
+library(tidytransit)
+
+read_gtfs("existing/networks/")
+```
+
 
 # Generate skims
 
