@@ -18,17 +18,15 @@ The followings skills will be useful for Analysis Assignment 3. They are listed 
 
 * **Compare skims**:
 
-* **Convert an OSM file to a PBF file**:
+* **Convert an OSM file to a PBF file**: You will be downloading OpenStreetMap data (and potentially editing it) in the \*.osm file format. To use it with the the the r5r package, you'll need to convert it to a \*.pbf file (which is just a compressed version of the \*.osm file).
 
 * **Download an OpenStreetMap network**: You'll need to represent the existing roadway network in a format that will allow you to calculate travel times. OpenStreetMaps is helpful for this.
 
-* **Download a GTFS feed**:
+* **Download a GTFS feed**: You'll need to download data on the transit network in the GTFS format. There are a couple places you can look for that data.
 
 * **Edit an OpenStreetMap network**: If the alternative you want to evaluate involves changes to the road network, you'll need to save a copy of the existing OpenStreetMap network you downloaded (see the "Download and OpenStreetMap network" topic), and prepare it for editing (see the "Prepare an OpenStreetMap network for editing" topic).
 
 * **Edit transit route frequency**:
-
-* **Edit transit route speed**:
 
 * **Generate skims**:
 
@@ -66,14 +64,16 @@ library(tigris)
 library(tidyverse)
 library(osmdata)
 
+# Load the MSA boundaries
 boundary <- core_based_statistical_areas() %>%
   filter(GEOID == "40060")
 
+# Define a bounding box containing the MSA
 richmond_bbox <- st_bbox(boundary)
 
-q <- opq(bbox = richmond_bbox) %>%
-  add_osm_feature(key = 'highway') %>%
-  osmdata_xml(file = 'existing/networks/streets.osm')
+q <- opq(bbox = richmond_bbox) %>% # create a query
+  add_osm_feature(key = 'highway') %>% # request only road data
+  osmdata_xml(file = 'existing/networks/streets.osm') # download osm file
 ```
 
 # Download a GTFS feed
@@ -82,9 +82,9 @@ You'll need to download data on the transit network in the GTFS format. There ar
 
 [OpenMobilityData](transitfeeds.com){target="_blank"} maintains a pretty good archive of GTFS feeds for cities throughout the world. You'll likely by able to find the GTFS feeed for the transit agency serving your study area there. Download it, and save it to the `networks` subfolder in the `existing` folder of your project directory. It will be a zipped file. No need to unzip (what I really mean is, please don't unzip it).
 
-You can also use the tidytransit package to find the GTFS feed you want. once you've loaded the package (`library(tidytransit)`), you can type `View(feedlist)` in your console. You'll be able to search for the name of the city or the name of the transit agency. `feedlist` has a column called `url_d` that you can use to download the GTFS feed. You can paste the url from that column into a web browser to download the file.
+You can also use the tidytransit package to find the GTFS feed you want. Once you've loaded the package (`library(tidytransit)`), you can type `View(feedlist)` in your console. You'll be able to search for the name of the city or the name of the transit agency. `feedlist` has a column called `url_d` that you can use to download the GTFS feed. You can paste the url from that column into a web browser to download the file.
 
-If you can't find the GTFS feed you need in the tidytransit feedlist or the OpenMobilityData site, you could also look at the transit agency's website. It will often be on a page called something like "Data for developers."
+If you can't find the GTFS feed you need in the tidytransit feedlist or the OpenMobilityData site, you try looking at the transit agency's website. It will often be on a page called something like "Data for developers."
 
 # Edit an OpenStreetMap network
 
@@ -114,18 +114,85 @@ This will open JOSM on your computer. [Here's a video showing how to open JOSM o
 
 # Edit transit route frequency
 
-If the alternative you're proposing involves changes in the frequency of one or more transit routes, you can use the scenRios package to edit the frequency of a transit route in a GTFS feed.
+If the alternative you're proposing involves changes in the frequency of one or more transit routes, you can use the `scenRios` package to edit the frequency of a transit route in a GTFS feed.
 
 First, you'll need to load the feed into your R environment using the `read_gtfs()` function in the `tidytransit` package.
 
-```{r}
+```{r, warning=FALSE}
 library(tidytransit)
+library(here)
 
-read_gtfs("existing/networks/")
+current_gtfs <- here("existing",
+                     "networks",
+                     "gtfs.zip") %>%
+  read_gtfs()
 ```
 
+Then you'll need to determine which route and service plan you want to edit. See the topics for "View GTFS routes" and "View GTFS service plans". 
+
+Once you've identified a route and service plan, you can view the current headways using the 
+
+```{r}
+library(scenRios)
+
+current_hdwys <- gtfs_get_hdwys(current_gtfs, 
+                                        route = "19",
+                                        service = "1")
+kable(current_hdwys)
+```
+It looks like the current minimum headway is 30 minutes, and that headway stays consistent throughout most of the day (10am to 7:30pm in one direction and 9:15am to 6:45pm in the other).
+
+You can use `gtfs_set_min_hdwy` to reduce headways proportionately throughout the service plan so that the minimum is 10 minutes.
+
+```{r}
+new_gtfs <- gtfs_set_min_hdwy(current_gtfs,
+                              route = "19",
+                              service = "1",
+                              new_hdwy = 10)
+```
+
+As I've mentioned, the scenRios package is still in development, so it might not consistently work right. Let's see how it did.
+
+```{r}
+new_hdwys <- gtfs_get_hdwys(new_gtfs,
+                            route = "19",
+                            service = "1")
+
+<<<<<<< HEAD
+kable(new_hdwys)
+=======
+
+>>>>>>> 989886087ac62ac370dbc1a9decad7d92565d15a
+```
+
+The minimum headway is now 11 minutes - a little off due to rounding errors. If you want, you can go back and set the minimum headway to 9 minutes, and it will come out to ten minutes. Or who knows? Maybe I'll fix the scenRios package to work better before you start working on your assignment.
+
+Once you've got the gtfs feed how you want it, you can write it to a file.
+
+```{r}
+new_gtfs_path <- here("alternative",
+                      "networks",
+                      "gtfs.zip")
+
+write_gtfs(new_gtfs, new_gtfs_path)
+```
 
 # Generate skims
+
+A skim is a matrix of travel times (or distances or costs) for all possible origin-destination pairs in your model. The R5R package is really useful for generating skims.
+
+Before you load the r5r package, you'll need to increase the memory your computer allocates to Java.
+
+```{r}
+options(java.parameters = "-Xmx2G")
+
+library(r5r)
+```
+
+```{r}
+
+```
+
 
 # Install a package from GitHub
 
@@ -154,7 +221,8 @@ old_network <- read_lines("existing/networks/streets.osm")
 
 new_network <- osm_prep_network(old_network)
 
-write_lines(new_network, file = "alternative/networks/streets.osm")
+write_lines(new_network, 
+            file = "alternative/networks/streets.osm")
 ```
 
 # View GTFS routes
