@@ -327,7 +327,6 @@ ggplot(census) +
   guides(color = guide_legend(override.aes = list(size=5, alpha = 0.6)))
 ```
 
-
 # Create a histogram 
 
 A histogram is a helpful way to illustrate the variation in a variable.
@@ -372,6 +371,111 @@ map <- leaflet(census) %>%
 
 saveWidget(map, file = 'zones/boundaries.html')
 ```
+
+# Create a stacked bar chart or pie chart
+
+There is a school of thought that is really against pie charts, and the developers of ggplot are part of that school, so they make it tricky to make a pie chart. You can still do it though because a pie chart is secretly just a stacked bar chart in a polar coordinate system.
+
+First I'll need to get some total values for the whole region (see the topic on "Get regional data").
+
+Let's say I wanted to get the regional share of households that have zero, one, or multiple vehicles. First I'll set up a list of variables with the numbers of households with zero, one, two, three, or more than three vehicles. I'll also separately save the variable name for the total number of households.
+
+```{r}
+vars <- c(`Zero vehicles` = 'B08201_002',
+          `One vehicle` = 'B08201_003',
+          `Two vehicles` = 'B08201_004',
+          `Three vehicles` = 'B08201_005',
+          `Four or more vehicles` = 'B08201_006')
+  
+total_hhs <- 'B08201_001'
+```
+
+Now I'll get the total values for the full study area.
+
+```{r, message=FALSE, results='hide'}
+library(tidycensus)
+
+region_vehs <- get_acs(
+  geography = "metropolitan statistical area/micropolitan statistical area",
+  variables = vars,
+  summary_var = total_hhs,
+  geometry = FALSE) %>%
+  filter(GEOID == "40060") %>%
+  mutate(pct = estimate / summary_est) %>%
+  select(variable, pct)
+```
+
+I could create a stacked bar chart to show those percentages.
+
+```{r}
+bar_chart <- ggplot(region_vehs, aes(x = 1, 
+                                     y = pct, 
+                                     fill = variable,
+                                     label = paste0(round(pct*100), "%"))) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5))
+  
+
+bar_chart
+```
+
+I can also wrap that bar chart around a polar coordinate system to make a pie chart.
+
+```{r}
+pie_chart <- bar_chart +
+  coord_polar(theta = "y") +
+  theme_void()
+
+pie_chart 
+```
+
+# Create a tree map
+
+There is a school of thought that is really against pie charts, and the developers of ggplot are part of that school, so they make it tricky to make a pie chart. Tree maps are nice alternative that avoid some of the pitfalls of pie charts. 
+
+First I'll need to get some total values for the whole region (see the topic on "Get regional data").
+
+Let's say I wanted to get the regional share of households that have zero, one, or multiple vehicles. First I'll set up a list of variables with the numbers of households with zero, one, two, three, or more than three vehicles. I'll also separately save the variable name for the total number of households.
+
+```{r, eval=FALSE}
+vars <- c(`Zero vehicles` = 'B08201_002',
+          `One vehicle` = 'B08201_003',
+          `Two vehicles` = 'B08201_004',
+          `Three vehicles` = 'B08201_005',
+          `Four or more vehicles` = 'B08201_006')
+  
+total_hhs <- 'B08201_001'
+```
+
+Now I'll get the total values for the full study area.
+
+```{r, eval=FALSE}
+library(tidycensus)
+
+region_vehs <- get_acs(
+  geography = "metropolitan statistical area/micropolitan statistical area",
+  variables = vars,
+  summary_var = total_hhs,
+  geometry = FALSE) %>%
+  filter(GEOID == "40060") %>%
+  mutate(pct = estimate / summary_est) %>%
+  select(variable, pct)
+```
+Now I can use the `treemapify` package to create a tree map.
+
+
+```{r}
+library(treemapify)
+
+ggplot(region_vehs, aes(area = pct, fill= variable)) +
+  geom_treemap(show.legend = FALSE, color = NA) +
+  geom_treemap_text(aes(label = paste(variable, "\n",
+                                      prettyNum(pct * 100, digits = 0),
+                                      "%",sep = "")), 
+                        color = "white") +
+  scale_fill_brewer(palette = "Set2")
+```
+
 
 # Customize axes and legends
 
