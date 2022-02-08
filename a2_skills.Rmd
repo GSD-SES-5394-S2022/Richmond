@@ -23,8 +23,10 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Collapse data:** This is useful if you want to collapse block-level data to the tract level, or tract-level data to the region level.
 * **Convert units:** When you calculate an area, the result will be in the units of your projected coordinate system (typically feet or meters). You may want to convert the units to something like acres or square miles.
 * **Create a chloropleth map:** A static chloropleth map is a useful way to display variation across space on a figure you want to include in report.
+* **Create a dot-density map:** A dot-density map can be useful for visualizing how the densities of things in one or more categories vary across space, without having to actually calculate densities.
 * **Create a histogram:** A histogram is a helpful way to illustrate the variation in a variable.
 * **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
+* **Create a tree map:** There is a school of thought that is really against pie charts, and the developers of ggplot are part of that school, so they make it tricky to make a pie chart. Tree maps are nice alternative that avoid some of the pitfalls of pie charts. 
 * **Customize axes and legends:** You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
 * **Define a color ramp:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
 * **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
@@ -591,18 +593,25 @@ census <- get_acs(geography = 'tract',
                  geometry = TRUE)
 ```
 
-If your study area has a lot of counties, you might find it really tiresome to type in the names of all of them. Another approach is to [define the study area boundary](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#define-study-area-boundary) (in this example, I've saved it to an layer called `boundary`), then download census tracts for the entire state (i.e. leave the county argument out), and then filter them to only include the ones within the study area. This will not work if you do not set `geometry = TRUE` in the `get_acs()` function.
+If your study area has a lot of counties, you might find it really tiresome to type in the names of all of them. Another approach is to define the study area boundary (see the "Define study area boundary" topic - in this example, I've saved it to an layer called `boundary`), then download census tracts for the entire state (i.e. leave the county argument out), and then filter them to only include the ones within the study area. This will not work if you do not set `geometry = TRUE` in the `get_acs()` function.
+
+In order to avoid capturing that are adjacent to my study area, I'm going to select based on centroid locations.
 
 ```{r, eval=FALSE}
 library(tidycensus)
 library(sf)
 
-census <- get_acs(geography = 'tract',
+va_census <- get_acs(geography = 'tract',
                  state = 'VA',
                  variables = vars,
                  output = 'wide',
-                 geometry = TRUE) %>%
+                 geometry = TRUE) 
+
+census_centroids <- st_centroid(va_census) %>%
   st_filter(boundary)
+
+census <- va_census %>%
+  st_filter(census_centroids)
 ```
 
 # Download employment data
