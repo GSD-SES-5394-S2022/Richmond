@@ -162,9 +162,6 @@ A lot of the variables you're likely to be working with are counts (e.g. number 
 
 Let's say I've already loaded data on my zones, including the zone boundaries. I can create a new variable called `tract_area` using mutate() and calculate the value of that variable as the area of each zone using `st_area()`.
 
-
-
-
 ```{r, message=FALSE}
 library(tidyverse)
 
@@ -246,7 +243,6 @@ census <- census %>%
   mutate(tract_area = set_units(tract_area, "mi2")) 
 ```
 
-
 # Create a chloropleth map 
 
 A static chloropleth map is a useful way to display variation across space on a figure you want to include in report. You can add your tract polygons to a ggplot and use the aes() function withing the geom_sf() function to indicate which variable the tract colors should represnet. `color=NA` means the map won't draw outlines for the zone boundaries. If you want outlines, you can select a color (for example, `color = "red"`). You can see a list of all the color names R recognizes by typing `colors()` into your console.
@@ -261,6 +257,76 @@ hh_size_map
 ```
 
 You might want to customize that map further: you could choose a different color ramp, customize the legend, [apply a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme), add a base map, display the street network, or reproject the data.
+
+# Create a dot-density map
+
+A dot-density map can be useful for visualizing how the densities of things in one or more categories vary across space, without having to actually calculate densities. 
+
+Here's how you could create a map showing the approximate distribution of households across your study area, with colors indicating household size.
+
+We'll start by creating five set of points, one for each household size category, where each point represents 100 households, and they are distributed randomly with their respective zones.
+
+It takes a while to create all these points, so be patient (maybe go get a snack while you wait).
+
+```{r}
+library(sf)
+
+hh_1person_pts <- st_sample(census, 
+                            size = ceiling(census$hh_1personE/100))
+
+hh_2person_pts <- st_sample(census, 
+                            size = ceiling(census$hh_2personE/100))
+
+hh_3person_pts <- st_sample(census, 
+                            size = ceiling(census$hh_3personE/100))
+
+hh_4person_pts <- st_sample(census, 
+                            size = ceiling(census$hh_4person_plusE/100))
+```
+
+Then we'll put each of those four sets of points into its own dataframe with a column indicating the household size category, and finally, we'll combine the four sets into a single dataframe.
+
+```{r}
+hh_1person_df <- tibble(hh_size = rep("1 person", 
+                                      length(hh_1person_pts))) %>%
+  st_sf(geom = hh_1person_pts)
+                        
+hh_2person_df <- tibble(hh_size = rep("2 people", 
+                                      length(hh_2person_pts))) %>%
+  st_sf(geom = hh_2person_pts)
+ 
+hh_3person_df <- tibble(hh_size = rep("3 people", 
+                                      length(hh_3person_pts))) %>%
+  st_sf(geom = hh_3person_pts)
+
+hh_4person_df <- tibble(hh_size = rep("4 or more people", 
+                                      length(hh_4person_pts))) %>%
+  st_sf(geom = hh_4person_pts)
+
+hh_size_pts <- rbind(hh_1person_df, hh_2person_df, hh_3person_df, hh_4person_df)
+```
+
+Now we can plot all these points on a map!
+
+I'm making the dots transparent (alpha = 0.3) and tiny (size = 0.1) to avoid overplotting.
+
+The guides() function at the end lets me adjust the dot sizes in the legend.
+
+Keep in mind that a dot-density map like this can be a little deceptive by randomly (and somewhat evenly) distributing points within a zone, and that generally won't match the actual spatial distribuution of the population within zones.
+
+```{r}
+ggplot(census) + 
+  geom_sf(color = "white") +
+  geom_sf(data = hh_size_pts, 
+          aes(color = hh_size), 
+          alpha = 0.3,
+          size = 0.1) +
+  scale_color_brewer("Household size\n(each points represents\n100 households)",
+                     palette = "Set1") +
+  theme_void()  +
+  guides(color = guide_legend(override.aes = list(size=5, alpha = 0.6)))
+```
+
 
 # Create a histogram 
 
