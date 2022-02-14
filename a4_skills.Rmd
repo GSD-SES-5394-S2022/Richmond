@@ -1,0 +1,498 @@
+---
+title: "Skills for Analysis Assignment 4"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::material
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The followings skills will be useful for Analysis Assignment 4. They are listed here alphabetically. I don't want to bias your thinking about which ones you'll end up using and in what order. But this page will be a useful reference.
+
+*Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I'm loading libraries at the top of each code chunk to make it more clear which methods use which packages.*
+
+* **Compare skims**: One way to confirm that your edits to the transit network are reflected in the model the way you intended is to compare the travel time skims with and without the change. There are a number of ways you could approach this task. Here's one possibility.
+* **Convert an OSM file to a PBF file**: You will be downloading OpenStreetMap data (and potentially editing it) in the \*.osm file format. To use it with the the the r5r package, you'll need to convert it to a \*.pbf file (which is just a compressed version of the \*.osm file).
+* **Download an OpenStreetMap network**: You'll need to represent the existing roadway network in a format that will allow you to calculate travel times. OpenStreetMaps is helpful for this.
+* **Download a GTFS feed**: You'll need to download data on the transit network in the GTFS format. There are a couple places you can look for that data.
+* **Edit an OpenStreetMap network**: If the alternative you want to evaluate involves changes to the road network, you'll need to save a copy of the existing OpenStreetMap network you downloaded (see the "Download and OpenStreetMap network" topic), and prepare it for editing (see the "Prepare an OpenStreetMap network for editing" topic).
+* **Edit transit route frequency**: If the alternative you're proposing involves changes in the frequency of one or more transit routes, you can use the `scenRios` package to edit the frequency of a transit route in a GTFS feed.
+* **Generate skims**: A skim is a matrix of travel times (or distances or costs) for all possible origin-destination pairs in your model. The R5R package is really useful for generating skims.
+* **Install a package from GitHub**: If you want to edit the the transit network or the street network, you'll find the `scenRios` package useful. This is a package I wrote specifically for this class (like, yesterday), and it's still very much in beta. You'll need to install it from GitHub (this is common for beta versions of new or updated packages).
+* **Prepare an OpenStreetMap network for editing**: The OSM file you download from the Overpass API (see the "Download an OpenStreetMap network" topic) will not include version tags, but to edit the file using JOSM (see the "Edit an OpenStreetMap network" topic), you'll need to have those.
+* **View GTFS service plans**: A GTFS feed will include different service plans for different dates (e.g. different service patterns for weekends or holidays). Service plans are defined using the `calendar` table and/or `calendar_dates`.
+
+# Compare skims
+
+One way to confirm that your edits to the transit network are reflected in the model the way you intended is to compare the travel time skims with and without the change. There are a number of ways you could approach this task. Here's one possibility.
+
+You can reshape the travel time skim for a specific mode from a long format (with a row for each origin-destination pair) to a wide format (with a row for each origin and a column for each destination). 
+
+```{r, include=FALSE}
+library(here)
+library(tidyverse)
+
+all_skims_exist <- here("existing",
+                        "data",
+                        "skims.csv") %>%
+  read_csv()
+
+all_skims_alt <- here("alternative",
+                      "data",
+                      "skims.csv") %>%
+  read_csv()
+```
+
+```{r}
+car_mat_exist <- all_skims_exist %>% 
+  select(fromId, toId, car_time) %>%
+  pivot_wider(names_from = toId, 
+              values_from = car_time) %>%
+  column_to_rownames("fromId")
+
+car_mat_alt <- all_skims_alt %>%
+  select(fromId, toId, car_time) %>%
+  pivot_wider(names_from = toId, 
+              values_from = car_time) %>%
+  column_to_rownames("fromId")
+  
+```
+
+Now you can subtract one matrix from another to find the difference
+
+```{r}
+car_diff <- car_mat_exist - car_mat_alt
+```
+
+I can see that the values are mostly negative. You might want to identify the zone for which travel times have changed the most - which one has the most negative value - the minimum value.
+
+```{r}
+total_diff <- car_diff %>%
+  replace(is.na(.), 0) %>%
+  mutate(total_diff = rowSums(across())) %>%
+  select(total_diff) %>%
+  rownames_to_column("GEOID")
+
+total_diff[which.min(total_diff$total_diff),]
+```
+
+Now you might want to create three maps that highlight the location of census tract 36029002502 and shows that travel time from that tract to each of the other tracts under the existing condition, the travel times from that tract under the alternative condition, and the difference in travel times. First, we'll need to attach the relevant variables to the zones boundaries.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+
+existing_max_diff <- car_mat_exist %>%
+  rownames_to_column("GEOID") %>%
+  select(GEOID, `36029002502`) %>%
+  rename(existing = `36029002502`)
+
+alt_max_diff <- car_mat_alt %>%
+  rownames_to_column("GEOID") %>%
+  select(GEOID, `36029002502`) %>%
+  rename(alt = `36029002502`)
+
+
+zones <- here("zones",
+              "boundaries.geojson") %>%
+  st_read() %>%
+  inner_join(existing_max_diff) %>%
+  inner_join(alt_max_diff) %>%
+  mutate(diff = alt - existing)
+```
+
+Here's a map highlighting zone 36029002502 in blue and showing the spatial variation in travel times to that zone under the existing condition.
+
+```{r}
+library(ggthemes)
+library(RColorBrewer)
+
+map_palette <- brewer.pal(5, "YlOrBr")
+
+map_existing <- ggplot(zones) +
+  geom_sf(aes(fill = existing),
+          color = NA) +
+  geom_sf(data = zones[zones$GEOID=="36029002502",],
+          fill = "blue",
+          color = "blue") +
+  scale_fill_gradientn(colours = map_palette,
+                       name = "Travel time\n(existing)") +
+  theme_void()
+
+map_existing
+```
+
+Here's a map highlighting zone 36029002502 in blue and showing the spatial variation in travel times to that zone under the alternative condition.
+
+```{r}
+library(ggthemes)
+library(RColorBrewer)
+
+map_palette <- brewer.pal(5, "YlOrBr")
+
+map_alt <- ggplot(zones) +
+  geom_sf(aes(fill = alt),
+          color = NA) +
+  geom_sf(data = zones[zones$GEOID=="36029002502",],
+          fill = "blue",
+          color = "blue") +
+  scale_fill_gradientn(colours = map_palette,
+                       name = "Travel time\n(alternative)") +
+  theme_void()
+
+map_alt
+```
+
+And here's a map highlighting zone 36029002502 in blue and showing the difference in travel times between the two alternatives.
+
+```{r}
+library(ggthemes)
+library(RColorBrewer)
+
+map_palette <- brewer.pal(5, "YlOrBr")
+
+map_alt <- ggplot(zones) +
+  geom_sf(aes(fill = diff),
+          color = NA) +
+  geom_sf(data = zones[zones$GEOID=="36029002502",],
+          fill = "blue",
+          color = "blue") +
+  scale_fill_gradientn(colours = map_palette,
+                       name = "Difference\nin travel times") +
+  theme_void()
+
+map_alt
+```
+
+When you create a map like this, take a minute to consider whether it's consistent with what you would expect to see, given the changes you've proposed.
+
+# Convert an OSM file to a PBF file
+
+You will be downloading OpenStreetMap data (and potentially editing it) in the \*.osm file format. To use it with the the the r5r package, you'll need to convert it to a \*.pbf file (which is just a compressed version of the \*.osm file). 
+
+On a PC, you can use the osmconvert executable that you'll find in your GitHub repo to do that. [Here's a video that shows how](https://harvard.zoom.us/rec/play/wQDI6cjRC98bESyWY9sWk0HaEaBm0gSfvajrd2VuoqOUhavIDB-PKrf8rczEn0iQBqVcIGRNrxnuJSL2.SFOMASsvYsb7kTR3?autoplay=true&startTime=1643906867000){target="_blank"}.
+
+On a Mac, you can use a program called osmium, which you'll need to install using Homebrew (which likely means you'll also need to install Homebrew). [Here's a video that shows how to do all that](https://harvard.zoom.us/rec/play/vw9e3HQzIZt5ki-jHUobTkL39B-SlXOKWVv7XG73xCbwODK7-PdxsxKcJblgA3F87wufYMcC2nY22rGh.Odv9oMq-y-2oDJMC?autoplay=true&startTime=1643665132000){target="_blank"}.
+
+# Create zone centroids
+
+You'll be calculating the travel times to and from each centroid, so you'll need to generate a set of centroid points from the zone boundary. 
+
+Note that the r5r package requires points to be in the WGS84 coordinate system and to have an ID column called "id".
+
+```{r, eval=FALSE}
+library(tidyverse)
+library(sf)
+library(here)
+
+centroids <- here("zones",
+                  "boundaries.geojson") %>%
+  st_read() %>%
+  st_centroid() %>%
+  st_transform("WGS84") %>%
+  rename(id = GEOID)
+```
+I recommend saving them to your zones folder. 
+
+```{r, eval=FALSE}
+st_write(centroids, here("zones", "centroids.geojson"))
+```
+
+# Download an OpenStreetMap network
+
+You'll need to represent the existing roadway network in a format that will allow you to calculate travel times. OpenStreetMaps is helpful for this. 
+
+The `osmdata` package includes functions to build a queries to request data from the [Overpass API](https://wiki.openstreetmap.org/wiki/Overpass_API) within a defined bounding box.
+
+First you'll need to use the `st_bbox()` function to define the bounding box based on the boundary of your study area. 
+
+Then you can use the `opq()` function to request OpenStreetMap data within that bounding box. `add_osm_feature()` lets you specify which types of features you want to request. By setting `key = 'highway'`, you indicate that you want all the roads (OpenStreetMaps refers to all roads, including pedestrian paths, as [highways](https://wiki.openstreetmap.org/wiki/Key:highway)). Finally, you can use `osmdata_xml()` to download and save the data you've requested to an OSM file.
+
+```{r, eval=FALSE}
+library(sf)
+library(tigris)
+library(tidyverse)
+library(osmdata)
+
+# Load the MSA boundaries
+boundary <- core_based_statistical_areas() %>%
+  filter(GEOID == "15380")
+
+# Define a bounding box containing the MSA
+buffalo_bbox <- st_bbox(boundary)
+
+q <- opq(bbox = buffalo_bbox) %>% # create a query
+  add_osm_feature(key = 'highway') %>% # request only road data
+  osmdata_xml(file = 'existing/networks/streets.osm') # download osm file
+```
+
+# Download a GTFS feed
+
+You'll need to download data on the transit network in the GTFS format. There are a couple places you can look for that data.
+
+[OpenMobilityData](transitfeeds.com){target="_blank"} maintains a pretty good archive of GTFS feeds for cities throughout the world. You'll likely by able to find the GTFS feeed for the transit agency serving your study area there. Download it, and save it to the `networks` subfolder in the `existing` folder of your project directory. It will be a zipped file. No need to unzip (what I really mean is, please don't unzip it).
+
+You can also use the tidytransit package to find the GTFS feed you want. Once you've loaded the package (`library(tidytransit)`), you can type `View(feedlist)` in your console. You'll be able to search for the name of the city or the name of the transit agency. `feedlist` has a column called `url_d` that you can use to download the GTFS feed. You can paste the url from that column into a web browser to download the file.
+
+If you can't find the GTFS feed you need in the tidytransit feedlist or the OpenMobilityData site, you try looking at the transit agency's website. It will often be on a page called something like "Data for developers."
+
+# Edit an OpenStreetMap network
+
+If the alternative you want to evaluate involves changes to the road network, you'll need to save a copy of the existing OpenStreetMap network you downloaded (see the "Download and OpenStreetMap network" topic), and prepare it for editing (see the "Prepare an OpenStreetMap network for editing" topic).
+
+You'll be editing using a Java application called JOSM (Java OpenStreetMap Editor). To run JOSM, you'll need to have Java SDK 11 installed on your computer. You can download it for free [here](https://www.oracle.com/java/technologies/downloads/#java11){target="_blank"} (it's possible you already have it on your computer if you've used the R5R package before).
+
+You'll run JOSM from a JAR file that you can find in your GitHub repo (also downloadable from [here](https://josm.openstreetmap.de/){target="_blank"}). If you are working on a fairly small study area, you can just open it by double-clicking on it (this would be fine for Buffalo, I think). If you are working on a larger region, you'll probably need to increase the memory allocated to Java when you open it, so you should open it from the command line.
+
+Once you've got the command line open, navigate to the folder where the JOSM jar file is saved (it's in the networks subfolder of your alternative folder of your GitHub repo / RStudio project directory). To do this, type `cd` followed by a space, then type the path to the networks subfolder the alternative folder in your GitHub repo. 
+
+On a PC, if your study area is Richmond, it will probably be something like this:
+
+`cd Documents\GitHub\Richmond\alternative\networks`
+
+On a Mac, if will probably be something like this: 
+
+`cd Richmond/alternative/networks`
+
+Then type:
+
+`java -jar -Xmx2g josm-tested.jar`
+
+`java` means your opening an application with Java, `-jar` means its a JAR file, `-Xmx2g` allocates two gigabytes of memory to Java, and `josm-tested.jar` is the filename of the application you're opening. 
+
+This will open JOSM on your computer. [Here's a video showing how to open JOSM on a Mac and what to do from there](https://harvard.zoom.us/rec/play/Jec7xZmMMMZ7cGTBCBCS0CJ0JPUxsCIZnlk43bERsicyCIZ68VcptBYPwgdv7mncLoKESvHwgs95zgl3.xcL9YPqQky9evdma?autoplay=true&startTime=1643383218000){target="_blank"}. [And here's the same thing on a PC](https://harvard.zoom.us/rec/play/1uCQQa5QYUVgcLVSB_cahuJR54AK4OyFYayVQG6wLMezbMeychrpN0zLbdl0UDwv92_LCF-2OlezjJVl.64uzqJOk4N-W15IR?autoplay=true&startTime=1643660096000){target="_blank"}.
+
+# Edit transit route frequency
+
+If the alternative you're proposing involves changes in the frequency of one or more transit routes, you can use the `scenRios` package to edit the frequency of a transit route in a GTFS feed.
+
+First, you'll need to load the feed into your R environment using the `read_gtfs()` function in the `tidytransit` package.
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(tidytransit)
+library(here)
+
+current_gtfs <- here("existing",
+                     "networks",
+                     "gtfs.zip") %>%
+  read_gtfs()
+```
+
+Then you'll need to determine which route and service plan you want to edit. See the topics for "View GTFS routes" and "View GTFS service plans". 
+
+Once you've identified a route and service plan, you can view the current headways using the 
+
+```{r, message=FALSE, warning=FALSE}
+library(scenRios)
+library(knitr)
+
+current_hdwys <- gtfs_get_hdwys(current_gtfs, 
+                                        route = "19",
+                                        service = "1")
+kable(current_hdwys)
+```
+It looks like the current minimum headway is 30 minutes, and that headway stays consistent throughout most of the day (10am to 7:30pm in one direction and 9:15am to 6:45pm in the other).
+
+You can use `gtfs_set_min_hdwy` to reduce headways proportionately throughout the service plan so that the minimum is 10 minutes.
+
+```{r}
+library(scenRios)
+
+new_gtfs <- gtfs_set_min_hdwy(current_gtfs,
+                              route = "19",
+                              service = "1",
+                              new_hdwy = 10)
+```
+
+As I've mentioned, the scenRios package is still in development, so it might not consistently work right. Let's see how it did.
+
+```{r}
+new_hdwys <- gtfs_get_hdwys(new_gtfs,
+                            route = "19",
+                            service = "1")
+
+
+kable(new_hdwys)
+```
+
+The minimum headway is now 11 minutes - a little off due to rounding errors. If you want, you can go back and set the minimum headway to 9 minutes, and it will come out to ten minutes. Or who knows? Maybe I'll fix the scenRios package to work better before you start working on your assignment.
+
+Once you've got the gtfs feed how you want it, you can write it to a file.
+
+```{r, eval=FALSE}
+new_gtfs_path <- here("alternative",
+                      "networks",
+                      "gtfs.zip")
+
+write_gtfs(new_gtfs, new_gtfs_path)
+```
+
+# Generate skims
+
+A skim is a matrix of travel times (or distances or costs) for all possible origin-destination pairs in your model. The R5R package is really useful for generating skims.
+
+Before you load the r5r package, you'll need to increase the memory your computer allocates to Java.
+
+```{r}
+options(java.parameters = "-Xmx2G")
+
+library(r5r)
+```
+
+Then you'll need to setup an R5 core associated with the directory with your existing networks (a GTFS file for transit and a pbf file for OpenStreetMap data).
+
+```{r}
+alternative_core <- here("alternative",
+                      "networks") %>%
+  setup_r5(verbose = FALSE)
+```
+
+This will create some additional files and save them to your networks directory. Now you can generate a travel time matrix for each mode. Here's how you can generate a driving skim.
+
+```{r, eval=FALSE}
+car_skim_alt <- travel_time_matrix(alternative_core, 
+                     origins = centroids,
+                     destinations = centroids,
+                     mode = "CAR")
+```
+
+To get a walking skim or a bike skim, set or `mode = "WALK"` `mode = "BICYCLE"`. You can see the results by typing `View(car_skim_alt)` into your console. You'll see a table with a column for an origin zone, a column for a destination zone, and the estimated travel time between them.
+
+![](images/car_skim.png)
+
+To get a transit skim, there are a few more things to keep in mind: 
+
+Transit travel times differ by time of day. If you don't specify a departure time, r5r will use the current time, which means you may get different results each time you run your code. If you have edited your GTFS feed (for example, increased transit frequency), make sure you're creating a skim for a time when the service plan you've edited is in effect. You'll need the `lubridate` package to parse the date. `ymd_hm()` will convert a year-month-day hours:minutes string to a date that R can recognize. In the example below, I'm using a departure time of 5pm on December 4, 2021.
+
+Also, some of your later analyses will require you to differentiate between in-vehicle and out-of-vehicle time for transit trips, so you want to ask r5r to return that breakdown. 
+
+```{r, eval=FALSE}
+library(lubridate)
+
+transit_skim_alt <- travel_time_matrix(alternative_core, 
+                     origins = centroids,
+                     destinations = centroids,
+                     mode = "TRANSIT",
+                     departure_datetime = ymd_hm("2021-12-04 17:00"),
+                     breakdown = TRUE)
+```
+
+
+Be sure and stop the r5 core when you're done with the travel time calculations.
+
+```{r, eval=FALSE}
+stop_r5()
+```
+
+
+You can see the results by typing `View(transit_skim_alt)` into your console. In addition to the three columns you'll see for driving, walking, or biking skims, you'll also see the following columns:
+
+* access_time: The time a traveler spends walking to the initial transit stop
+* wait_time: The time a traveler spends waiting at the initial transit stop 
+* ride_time: The total time a traveler spends in transit vehicles
+* transfer_time: The total time a traveler spends waiting at intermediate transfer stops
+* egress_time: The time a traveler spends walking to their destination
+* combined_time: The sum of the above times. May differ slightly from travel_time due to rounding
+routes: IDs for the routes the traveler uses.
+n_rides: The number of separate routes the traveler uses.
+
+Some of the rows in the transit skim have a value of zero for n_rides. These are trips where a transit-dependent traveler would have walked rather than use any available transit service (because there is no transit service connecting the origin to the destination that offers travel-time savings over walking). Since these are not really transit trips, we can exclude them from the skim.
+
+```{r, eval=FALSE}
+transit_skim_alt <- transit_skim_alt %>%
+  filter(n_rides > 0)
+```
+
+Once you've generated skims for each of the modes you want to include in your model (you *must* include at least transit and driving; you may choose to include walking and cycling), you can join them into a single data frame and save the results to a csv. If your proposal includes changes to the transportation network, you should do this for both the existing condition and the alternative condition. Otherwise, you should save a copy of the same set of skims to your existing and alternative folders.
+
+Prior to joining the skims you should rename the travel_time column to specify a mode.
+
+```{r, eval=FALSE}
+car_skim_alt <- car_skim_alt %>%
+  rename(car_time = travel_time) 
+
+transit_skim_alt <- transit_skim_alt %>%
+  rename(transit_time = travel_time) 
+
+walk_skim_alt <- walk_skim_alt %>%
+  rename(walk_time = travel_time)
+
+all_skims_alt <- full_join(transit_skim_alt, car_skim_alt) %>%
+  full_join(walk_skim_alt)
+
+write_csv(all_skims_alt, here("alternative/data/skims.csv"))
+```
+
+
+# Install a package from GitHub
+
+If you want to edit the the transit network or the street network, you'll find the `scenRios` package useful. This is a package I wrote specifically for this class (like, yesterday), and it's still very much in beta. You'll need to install it from GitHub (this is common for beta versions of new or updated packages).
+
+To install a package from GitHub, you can use the `install_github()` function in the `devtools` package, with the url for the repo where the package is. The repo for the scenRios package is at `https://github.com/c-voulgaris/scenRios`.
+
+```{r, eval=FALSE}
+library(devtools)
+
+install_github("https://github.com/c-voulgaris/scenRios")
+```
+
+
+# Prepare an OpenStreetMap network for editing
+
+The OSM file you download from the Overpass API (see the "Download an OpenStreetMap network" topic) will not include version tags, but to edit the file using JOSM (see the "Edit an OpenStreetMap network" topic), you'll need to have those.
+
+The scenRios package includes a function called `osm_prep_network` that will add those for you. You'll need to load the contents of the file using `read_lines()`, then you can use `osm_prep_network()` to add the version tags, and then you can use `write_lines()` to save a modified version of the network that you can edit in JOSM.
+
+```{r, eval=FALSE}
+library(scenRios)
+library(tidyverse)
+
+old_network <- read_lines("existing/networks/streets.osm")
+
+new_network <- osm_prep_network(old_network)
+
+write_lines(new_network, 
+            file = "alternative/networks/streets.osm")
+```
+
+# View GTFS service plans
+
+A GTFS feed will include different service plans for different dates (e.g. different service patterns for weekends or holidays). Service plans are defined using the `calendar` table and/or `calendar_dates`. 
+
+To see which service plans are active for particular dates, you'll first need to load the GTFS feed into your environment.
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(tidytransit)
+library(here)
+
+current_gtfs <- here("existing",
+                     "networks",
+                     "gtfs.zip") %>%
+  read_gtfs()
+```
+
+
+In this example from Buffalo, you can see that there is `calendar_dates` table, but no `calendar` table. This means a service id is specified for each individual date (so you won't be able to get transit travel times for a date that isn't explicitly listed). 
+
+![](images/nfta_gtfs.png)
+
+If there is a calendar_dates table, you can view it by typing `View(current_gtfs$calendar_dates)` into your console.
+
+You'll see a table with three columns: service_id, date, and exception_type. If there is no `calendar` table, the exception_type table should have a value of 1 for all dates. 
+
+![](images/nfta_cal_dates.png)
+
+If there is a `calendar` table, then `calendar_dates` shows exceptions to the `calendar` table, where a 1 represents service added that otherwise wouldn't run, and a 2 represents service removed that otherwise would run.
+
+If there is a `calendar` table in your GTFS feed, you can view it by typing `View(current_gtfs$calendar)` into your console.
+
+You'll see a table with a column indicating the service ID, a column for each day of the week, a start date, and an end date. In the example below, the service pattern in the first row runs on weekdays during the academic year (September to June). 
+
+![](images/slo_calendar.png)

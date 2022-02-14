@@ -48,24 +48,22 @@ Your proposed alternative might involve a land use change that would add househo
 
 Maybe my proposal is to build a bunch of low-income housing in a particular neighborhood, and I think the result would be to add 100 low-income, zero-car, 1-person households to tract 51041101013 (that's the GEOID code). I'd need to add 100 to the total number of households, to the number of housholds in the lowest income quintile, to the number of zero-car households, and to the number of 1-person households.
 
-In this example, I'm assuming the data on your existing zones are already saved to a csv file, so I'll use that as a starting point (for your own assignment, it's more likely that you'll have created the dataset earlier, so you'll still have it in your environment with needing to load it from the file). 
+For each variable I want to change, I'll use an `ifelse()` function to indicate that for a row where the GEOID is "36029004602" (`GEOID == "36029004602"` in the first argument of the `ifelse()` function), I want to increase the value by 100 (`total_hhsE + 100` in the second argument), otherwise I'll leave the original value (`total_hhsE` in the last argument).
 
-For each variable I want to change, I'll use an `ifelse()` function to indicate that for a row where the GEOID is "51041101013" (`GEOID == "51041101013"` in the first argument of the `ifelse()` function), I want to increase the value by 100 (`total_hhsE + 100` in the second argument), otherwise I'll leave the original value (`total_hhsE` in the last argument).
-
-```{r, message=FALSE, results='hide'}
+```{r, eval=FALSE}
 library(tidyverse)
 
-zones_new <- read_csv("existing/data/zone_data.csv") %>%
-  mutate(total_hhsE = ifelse(GEOID == "51041101013",
+zones_new <- final_data %>%
+  mutate(total_hhsE = ifelse(GEOID == "36029004602",
                              total_hhsE + 100,
                              total_hhsE),
-         no_vehE = ifelse(GEOID == "51041101013",
+         no_vehE = ifelse(GEOID == "36029004602",
                              no_vehE + 100,
                              no_vehE),
-         hh_1personE = ifelse(GEOID == "51041101013",
+         hh_1personE = ifelse(GEOID == "36029004602",
                              hh_1personE + 100,
                              hh_1personE),
-         inc_quint_1 = ifelse(GEOID == "51041101013",
+         inc_quint_1 = ifelse(GEOID == "36029004602",
                              inc_quint_1 + 100,
                              inc_quint_1))
 ```
@@ -76,7 +74,13 @@ zones_new <- read_csv("existing/data/zone_data.csv") %>%
 You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
 
 ```{r, include=FALSE}
-zones <- zones_new %>%
+library(tidyverse)
+library(here)
+
+zones <- here("existing",
+              "data",
+              "zone_data.csv") %>%
+  read_csv() %>%
   mutate(pct_no_veh = no_vehE / total_hhsE)
 
 hist <- ggplot(zones) +
@@ -188,18 +192,18 @@ census <- census %>%
   mutate(inc_quint_1 = inc_lt_10kE +
                        inc_btw_10k_15kE +
                        inc_btw_15k_20kE +
-                       inc_btw_20k_25kE +
-                       inc_btw_25k_30kE,
-         inc_quint_2 = inc_btw_30k_35kE +
+                       inc_btw_20k_25kE,
+         inc_quint_2 = inc_btw_25k_30kE +
+                       inc_btw_30k_35kE +
                        inc_btw_35k_40kE +
                        inc_btw_40k_45kE +
-                       inc_btw_45k_50kE +
-                       inc_btw_50k_60kE,
-         inc_quint_3 = inc_btw_60k_75kE +
-                       inc_btw_75k_100kE,
-         inc_quint_4 = inc_btw_100k_125kE +
-                       inc_btw_125k_150kE,
-         inc_quint_5 = inc_btw_150k_200kE +
+                       inc_btw_45k_50kE,
+         inc_quint_3 = inc_btw_50k_60kE +
+                       inc_btw_60k_75kE,
+         inc_quint_4 = inc_btw_75k_100kE,
+         inc_quint_5 = inc_btw_100k_125kE +
+                       inc_btw_125k_150kE +
+                       inc_btw_150k_200kE +
                        inc_gt_200kE)
 ```
 
@@ -209,7 +213,7 @@ census <- census %>%
 This is useful if you want to collapse block-level data to the tract level. So for example, you might use it if you just [loaded the LEHD data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-employment-data).
 
 ```{r, include=FALSE}
-lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/va/wac/va_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
+lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/ny/wac/ny_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
   rename(total_emp = C000) %>%
   mutate(basic_emp = CNS01+CNS02+CNS03+CNS04+CNS05+CNS06+CNS08+CNS09) %>%
   rename(retail_emp = CNS07) %>%
@@ -230,7 +234,7 @@ lehd_tracts <- lehd_blocks %>%
   summarize(across(everything(), ~sum(.)))
 ```
 
-Now I have the total employment in each of these categories for every census tract in the state. I'd want to filter that down to just my study area, but if I already have the [population data](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#download-census-tract-data) for my study area, I can just [join the two dataframes](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#join-two-data-frames) and that will take care of the filtering.
+Now I have the total employment in each of these categories for every census tract in the state. I'd want to filter that down to just my study area, but if I already have the population data for my study area (see the "Download census tract data" topic) for my study area, I can just join the two dataframes (see the "Join two data frames" topic) and that will take care of the filtering.
 
 # Convert units 
 
@@ -259,6 +263,12 @@ hh_size_map
 You might want to customize that map further: you could choose a different color ramp, customize the legend, [apply a theme](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#apply-a-ggplot-theme), add a base map, display the street network, or reproject the data.
 
 # Create a dot-density map
+
+```{r, include=FALSE}
+census <- census %>%
+  filter(GEOID != "36063990000")
+```
+
 
 A dot-density map can be useful for visualizing how the densities of things in one or more categories vary across space, without having to actually calculate densities. 
 
@@ -357,7 +367,7 @@ Even if your deliverable will be all static content in a report, it can be helpf
 
 I'll use the `leaflet` package to create an interactive map. I'll save it to an html file so I can open the file to view in my browser (once you've saved it, the html files will appear in your repository directory on your computer and also in your files pane in RStudio - if you push it to GitHub, you'll also be able to view it on your [github.io page](https://gsd-ses-5394-s2022.github.io/Richmond/zones/boundaries.html){target="_blank"}). I'll add a popup so you can click on a zone to get the GEOID (which you can then just copy/paste from your browser to use in other code).
 
-```{r, warning=FALSE}
+```{r, eval=FALSE}
 library(leaflet)
 library(htmlwidgets)
 
@@ -567,7 +577,7 @@ I'm using `formatC()` to control the number of decimal places to display (`forma
 ```{r}
 hh_size_map +
   scale_fill_continuous(name = "Average household size",
-                        breaks = size_brks <- seq(1.5, 3.25, by = 0.25),
+                        breaks = size_brks <- seq(1, 4, by = 0.5),
                         labels = paste(formatC(size_brks, 
                                                format="f",
                                                digits=2), 
@@ -707,14 +717,14 @@ hh_size_map +
 
 In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
 
-If all you need is the boundary, you can use the `core_based_statistical_areas()` function in the `tigris` package. That will return the boundaries for all the CBSAs in the United States. Then you can filter those to only keep the one corresponding to your study area (I'm using Richmond in this example - the GEOID is 40060)
+If all you need is the boundary, you can use the `core_based_statistical_areas()` function in the `tigris` package. That will return the boundaries for all the CBSAs in the United States. Then you can filter those to only keep the one corresponding to your study area (I'm using Buffalo in this example - the GEOID is 15380)
 
 ```{r,eval=FALSE}
 library(tidyverse)
 library(tigris)
 
 boundary <- core_based_statistical_areas() %>%
-  filter(GEOID == "40060")
+  filter(GEOID == "15380")
 ```
 
 If you also want to get region-level data in addition to just the boundaries, you can use the tidycensus package (see the "Get Regional Data" topic).
@@ -725,7 +735,7 @@ You'll need to download several tract-level variables from the census. You'll fi
 
 Assuming you've already [defined a list of variables](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#list-census-variable-names) and saved it as a [character vector](https://r4ds.had.co.nz/vectors.html){target="_blank"} called `vars`, you can use the `get_acs()` function in the `tidycensus` package to download the data. 
 
-```{r, eval=FALSE}
+```{r}
 vars <- c(total_hhs = 'B08203_001',
           no_veh = 'B08203_002',
           hh_1person = 'B08201_007',
@@ -752,12 +762,12 @@ vars <- c(total_hhs = 'B08203_001',
 
 I'll use the `get_acs()` function from the `tidycensus` package. `geography = 'tract'` means I want tract-level data. I'll also specify the state and county (or counties - I can provide a list of all the counties in my study area here if there is more than one). In most cases, I'll set `output = wide` because I want each variable in its own column (you can see an exception [here]() though). You'll also need the zone/tract boundaries at some point, so you should get those at the same time by setting `geometry = TRUE`.
 
-```{r, eval=FALSE}
+```{r}
 library(tidycensus)
 
 census <- get_acs(geography = 'tract',
-                 state = 'MA',
-                 county = c('Suffolk', 'Middlesex'),
+                 state = 'NY',
+                 county = c('Erie', 'Niagara'),
                  variables = vars,
                  output = 'wide',
                  geometry = TRUE)
@@ -808,12 +818,12 @@ You can read in the file to R directly from that link. That file has 53 variable
 
 So you can use `select()` to keep those (and use `mutate()` to calculate service employment) and drop everything else (make sure you also keep w_geocode, which has the GEOID for the block). 
 
-This data is at the census block level, not the tract level. You'll need to [collapse it to the tract level](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html#collapse-data).
+This data is at the census block level, not the tract level. You'll need to collapse it to the tract level (see the "Collapse data" topic).
 
 ```{r, eval=FALSE}
 library(tidyverse)
 
-lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/va/wac/va_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
+lehd_blocks <- read_csv('https://lehd.ces.census.gov/data/lodes/LODES7/ny/wac/ny_wac_S000_JT00_2019.csv.gz', show_col_types = FALSE) %>%
   rename(total_emp = C000) %>%
   mutate(basic_emp = CNS01+CNS02+CNS03+CNS04+CNS05+CNS06+CNS08+CNS09) %>%
   rename(retail_emp = CNS07) %>%
@@ -849,7 +859,7 @@ In this example, I want to have some tract-level variables that indicate how man
 
 First I'll create a list of variables indicating the number of households in each of 16 income categories (see the "List census variable names" topic).
 
-```{r}
+```{r, eval=FALSE}
 vars <- c(inc_lt_10k = 'B19001_002',
           inc_btw_10k_15k = 'B19001_003',
           inc_btw_15k_20k = 'B19001_004',
@@ -872,7 +882,7 @@ Then I'll download those variables (see the "Download Census tract data" topic) 
 
 If you need the spatial extent of the study area, you could just add `geometry = TRUE` to the `get_acs()` function instead of [getting the boundaries through the `tigris` package] (see the "Define study area boundary" topic for how to get the boundary from the Tigris package). I'm setting `geometry = FALSE` in this case, assuming I don't need the study area boundary data.
 
-After a pipe (`%>%`) I filter the data to only include my study area (I'm using Richmond in this example - the GEOID is 40060).
+After a pipe (`%>%`) I filter the data to only include my study area (I'm using Buffalo in this example - the GEOID is 15380).
 
 After another pipe, I create a variable (see the "Calculate new variables" topic) with the percent of households in each category, and then I use the `cumsum()` function to calculate a cumulative percentage. Finally, I delete the columns I don't need (see the "Organize data columns" topic), keeping only the cumulative percentage and variable names.
 
@@ -886,7 +896,7 @@ region_inc <- get_acs(
   variables = vars,
   summary_var = 'B19001_001',
   geometry = FALSE) %>%
-  filter(GEOID == "40060") %>%
+  filter(GEOID == "15380") %>%
   mutate(pct = estimate / summary_est) %>%
   mutate(cumul_pct = cumsum(pct)) %>%
   select(variable, cumul_pct)
@@ -898,7 +908,7 @@ Now I can print the table (see the "Summarize tract statistics" topic).
 kable(region_inc, digits=2)
 ```
 
-From the table above, I can see that 20 percent of households have incomes below \$30,000 per year, 40 percent have incomes below \$60,000 per year, 60 percent (or close enough) have incomes below \$100,000, and 80 percent have incomes below \$150,000 per year. These are thresholds I could use to define broader income categories for my tract-level data. 
+From the table above, I can see that 20 percent of households have incomes below \$25,000 per year, 40 percent have incomes below \$50,000 per year, 60 percent (or close enough) have incomes below \$75,000, and 80 percent have incomes below \$100,000 per year. These are thresholds I could use to define broader income categories for my tract-level data. 
 
 # Join two data frames
 
@@ -906,7 +916,7 @@ If you have employment data in one dataframe (see the "Download employment data"
 
 In these examples, I know my population data only includes tracts in my study area because I filtered to to my study area boundary. My employment data is for the whole state. I'll do a left join, with the population data on the left (i.e. listed first), which wil drop all the rows of the employment data that aren't include in my population data.
 
-```{r}
+```{r, results='hide'}
 zones <- left_join(census, lehd_tracts)
 ```
 
@@ -977,7 +987,7 @@ vars <- c(total_hhs = 'B08203_001',
 
 At some point, you'll find you have more columns in your dataframe that you need. You can use the `select()` function to delete variables you don't need and also to reorder columns. 
 
-Here are the first few rows of a dataframe with a 57 columns:
+Here are the first few rows of a dataframe with a 59 columns:
 
 ```{r, message=FALSE, warning=FALSE}
 library(knitr)
@@ -1008,7 +1018,11 @@ The only ones I want to keep are these 14:
 
 That's the order they currently appear in, but for whatever reason, I'd like the employment variables to come first.
 
-```{r, message=FALSE, warning=FALSE}
+```{r, eval=FALSE}
+library(knitr)
+library(kableExtra)
+library(tidyverse)
+
 final_data <- zones %>%
   select(GEOID, 
          total_emp,
@@ -1026,7 +1040,19 @@ final_data <- zones %>%
          inc_quint_3,
          inc_quint_4,
          inc_quint_5)
+```
 
+And now we can see that we're left with the variables we selected in the order we specified.
+
+```{r, include=FALSE}
+final_data <- here("existing",
+                   "data",
+                   "zone_data.csv") %>%
+  read_csv()
+```
+
+
+```{r}
 kable(head(final_data)) %>%
   scroll_box(width = "100%", height = "500px")
 ```
@@ -1038,14 +1064,14 @@ You might have situations where you only need the zone boundaries, or you only n
 If you just need the zone boundaries without any of the associated variables, you can use `select()` to drop everything except the geometry column and the GEOID (you still want the GEOID so you can identify the tract later).
 
 ```{r}
-zone_boundaries <- zones %>%
+zone_boundaries <- final_data %>%
   select(GEOID, geometry)
 ```
 
 If you just want the data without the geometry, you can use `st_drop_geometry()`.
 
-```{r}
-zone_data <- zones %>%
+```{r, eval=FALSE}
+zone_data <- final_data %>%
   st_drop_geometry()
 ```
 
@@ -1090,14 +1116,14 @@ When you have all the zone data how you want it, you should save it to a file so
 
 To write spatial data, I suggest saving it to a geojson file using `st_write()`. st_write() can write spatial data to few different file formats, including ESRI shapefiles (useful if you want to bring your data into ArcGIS). I personally like the geojson format because I find it easy to work with.
 
-```{r, results='hide'}
+```{r, eval=FALSE}
 st_write(zone_boundaries, "zones/boundaries.geojson", append = FALSE)
 ```
 
 To write tabular data, it makes sense to save it to a csv file using `write_csv()`.
 
-```{r}
-write_csv(zone_data, "existing/data/zone_data.csv", append = FALSE)
+```{r, eval=FALSE}
+write_csv(final_data, "existing/data/zone_data.csv", append = FALSE)
 
 write_csv(zones_new, "alternative/data/zone_data.csv", append = FALSE)
 ```
