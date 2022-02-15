@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Overview
 
-The followings skills will be useful for Analysis Assignment 4. They are listed here alphabetically. I don't want to bias your thinking about which ones you'll end up using and in what order. But this page will be a useful reference.
+The following skills will be useful for Analysis Assignment 4. They are listed here alphabetically because I don't want to bias your thinking about which ones you'll end up using and in what order. But this page will be a useful reference.
 
 *Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I'm loading libraries at the top of each code chunk to make it more clear which methods use which packages.*
 
@@ -339,7 +339,7 @@ A skim is a matrix of travel times (or distances or costs) for all possible orig
 
 Before you load the r5r package, you'll need to increase the memory your computer allocates to Java.
 
-```{r}
+```{r, eval=FALSE}
 options(java.parameters = "-Xmx2G")
 
 library(r5r)
@@ -347,7 +347,7 @@ library(r5r)
 
 Then you'll need to setup an R5 core associated with the directory with your existing networks (a GTFS file for transit and a pbf file for OpenStreetMap data).
 
-```{r}
+```{r, eval=FALSE}
 alternative_core <- here("alternative",
                       "networks") %>%
   setup_r5(verbose = FALSE)
@@ -428,7 +428,6 @@ all_skims_alt <- full_join(transit_skim_alt, car_skim_alt) %>%
 
 write_csv(all_skims_alt, here("alternative/data/skims.csv"))
 ```
-
 
 # Install a package from GitHub
 
