@@ -1,0 +1,157 @@
+---
+title: "Skills for Analysis Assignment 5"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::material
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The following skills will be useful for Analysis Assignment 5. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in Assignments 2 and 4. 
+
+# Required packages
+
+The r5r package you used last week to generate travel time skims also has a function called `accessibility()` that will calculate accessibilty for you. You'll need to start by increasing the memory available to Java, loading the r5r package, and setup the r5 core.
+
+In addition to the r5r package, you'll also need `tidyverse`, `here`, `sf`, and `lubridate`. 
+
+The r5r package you used last week to generate travel time skims also has a function called `accessibility()` that will calculate accessibilty for you. You'll need to start by increasing the memory available to Java, loading the r5r library, and setup the r5 core.
+
+```{r, warning=FALSE, message=FALSE, results='hide'}
+options(java.parameters = '-Xmx2G')
+
+library(r5r)
+library(here)
+library(tidyverse)
+library(sf)
+library(lubridate)
+```
+
+# Set up centroid information
+
+You will need to have a attach information about the total number of jobs at each destination to a set of centroids, and the centroids need to have a column called "id".
+
+In this example, I have to convert the GEOID to a character string since the geojson file with the centroids stores it as a character string.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+jobs <- here("existing",
+             "data",
+             "zone_data.csv") %>%
+  read_csv() %>%
+  select(GEOID, total_emp) %>%
+  mutate(GEOID = as.character(GEOID))
+
+centroids <- here("zones",
+                  "centroids.geojson") %>%
+  st_read() %>%
+  left_join(jobs) %>%
+  rename(id = GEOID)
+```
+
+# Set up r5r core
+
+As you did for the travel time skims, you'll need to set up an r5r core. If the transportation network differs between your two alternatives, you'll need to do this for each alternative.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+existing_core <- here("existing",
+                      "networks") %>%
+  setup_r5(verbose = FALSE)
+```
+
+# Calculate accessibility for non-transit modes
+
+Now I can call the `accessibilty()` function. It takes some of the same functions as the `travel_time_matrix()` function you used in your previous assignment. It also has some additional arguments you should set. For non-transit modes, you only need to set `opportunities_colname` and some values to define your decay function. 
+
+`opportunities_colname` sets the name of the column that has the number of jobs each zone (in theory, you could calculate separate accessibilty measures for access to each type of employment or other types of destinations, but we'll just use total employment for this assignment).
+
+You can define the decay function using three arguments:
+
+* `decay_function` defines the shape of the decay function, which can be `"step"`, `"logistic"`, `"exponential"`, or `"linear"`.
+* `cutoffs` defines the cut-off value for a step function, the inflection point for a logistic function, the half-life for an exponential function, or the midpoint for a linear function.
+* `decay_value` defines the standard deviation for a logistic function or the width of a linear function. It doesn't do anything for a step function or an exponential function.
+
+You can view the shapes of alternative decay functions and the effects of their respective parameters [here](https://urban-stack.shinyapps.io/access-decay/){target="_blank"}.
+
+```{r, results='hide'}
+car_access_existing <- accessibility(existing_core,
+                                     origins = centroids,
+                                     destinations = centroids,
+                                     opportunities_colname = 'total_emp',
+                                     mode = "CAR",
+                                     decay_function = "logistic",
+                                     cutoffs = 30,
+                                     decay_value = 3, 
+                                     verbose = FALSE)
+```
+
+Now you'll have a data frame in your environment called `car_access_exising` with four columns:
+
+* `from_id` is the GEOID of the census tract
+* `percentile` will be 50. This indicates that you're seeing the median accessibility value within a set of sampled departure times. You can request the function to report multiple percentile values, but for non-transit modes, the travel times and accessibility values won't vary over time, so there's no reason to do mess with it.
+* `cutoff` is the cutoff value you selected. It is possible to get multiple accessibility values by specifying multiple cutoff values, but we aren't doing that for this assignment.
+* `accessibility` is the total number of jobs (opportunities) within an isochrone defined by the cutoff value if you are using a step function. Otherwise, it's the total number of jobs/opportunities in the study area, weighted according to the decay function you've defined. If you aren't using a step function, the real-world interpretation of this value isn't terribly intuitive, and it's best to just think of it as an accessibility index, where higher value indicate greater accessibility.
+
+# Calculate accessibility for transit
+
+For transit accessibility, you'll want to define a couple more parameters in addition to the ones you used for car accessibility. 
+
+* `departure_datetime` defines the initial departure time for calculating transit travel times (as it does for the `travel_time_matrix()` function).
+* `time_window` defines the time period (in minutes) over which travel times are sampled at one-minute intervals.
+
+```{r, results='hide'}
+transit_access_existing <- accessibility(existing_core,
+                                     origins = centroids,
+                                     destinations = centroids,
+                                     opportunities_colname = 'total_emp',
+                                     mode = "TRANSIT",
+                                     decay_function = "logistic",
+                                     cutoffs = 30,
+                                     decay_value = 3, 
+                                     verbose = FALSE,
+                                     departure_datetime = 
+                                       ymd_hm("2021-12-04 17:00"),
+                                     time_window = 120)
+```
+
+Now you have a data frame in your environment called `transit_access_existing` with the same four variables as `car_access_existing`.
+
+You'll need to create chloropleth maps to show the spatial variation in accessibility for each mode included in your model and for each alternative. 
+
+# Compare auto and transit accessibility
+
+One simple way to evaluate the quality of transit service for a location is to compare auto accessibility and transit accessibility by calculating a ratio.
+
+```{r}
+car_access_existing <- car_access_existing %>%
+  select(from_id, accessibility) %>%
+  rename(GEOID = from_id,
+         car_access = accessibility)
+
+transit_access_existing <- transit_access_existing %>%
+  select(from_id, accessibility) %>%
+  rename(GEOID = from_id,
+         transit_access = accessibility)
+
+access_compare <- left_join(car_access_existing, transit_access_existing) %>%
+  mutate(ratio = transit_access / car_access)
+```
+
+You might choose to create chloropleth maps to show the spatial variation in accessibility in the ratio of car accessibility to transit accessibility. You might also choose to create some summary tables.
+
+# Save your results
+
+You will be using the ratio of transit accessibility to car accessibility in your model predicting vehicle availability, so you should save the results for each alternative in its respective data folder.
+
+```{r}
+write_csv(access_compare, file = here("existing", 
+                                      "data",
+                                      "access_compare.csv"))
+```
+
+
+
