@@ -39,7 +39,7 @@ You will need to have a attach information about the total number of jobs at eac
 In this example, I have to convert the GEOID to a character string since the geojson file with the centroids stores it as a character string.
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
-jobs <- here("existing",
+jobs <- here("alternative",
              "data",
              "zone_data.csv") %>%
   read_csv() %>%
@@ -58,7 +58,7 @@ centroids <- here("zones",
 As you did for the travel time skims, you'll need to set up an r5r core. If the transportation network differs between your two alternatives, you'll need to do this for each alternative.
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
-existing_core <- here("existing",
+alternative_core <- here("alternative",
                       "networks") %>%
   setup_r5(verbose = FALSE)
 ```
@@ -78,7 +78,7 @@ You can define the decay function using three arguments:
 You can view the shapes of alternative decay functions and the effects of their respective parameters [here](https://urban-stack.shinyapps.io/access-decay/){target="_blank"}.
 
 ```{r, results='hide'}
-car_access_existing <- accessibility(existing_core,
+car_access_alt <- accessibility(alternative_core,
                                      origins = centroids,
                                      destinations = centroids,
                                      opportunities_colname = 'total_emp',
@@ -104,7 +104,7 @@ For transit accessibility, you'll want to define a couple more parameters in add
 * `time_window` defines the time period (in minutes) over which travel times are sampled at one-minute intervals.
 
 ```{r, results='hide'}
-transit_access_existing <- accessibility(existing_core,
+transit_access_alt <- accessibility(alternative_core,
                                      origins = centroids,
                                      destinations = centroids,
                                      opportunities_colname = 'total_emp',
@@ -127,17 +127,17 @@ You'll need to create chloropleth maps to show the spatial variation in accessib
 One simple way to evaluate the quality of transit service for a location is to compare auto accessibility and transit accessibility by calculating a ratio.
 
 ```{r}
-car_access_existing <- car_access_existing %>%
+car_access_alt <- car_access_alt %>%
   select(from_id, accessibility) %>%
   rename(GEOID = from_id,
          car_access = accessibility)
 
-transit_access_existing <- transit_access_existing %>%
+transit_access_alt <- transit_access_alt %>%
   select(from_id, accessibility) %>%
   rename(GEOID = from_id,
          transit_access = accessibility)
 
-access_compare <- left_join(car_access_existing, transit_access_existing) %>%
+access_compare <- left_join(car_access_alt, transit_access_alt) %>%
   mutate(ratio = transit_access / car_access)
 ```
 
@@ -148,7 +148,7 @@ You might choose to create chloropleth maps to show the spatial variation in acc
 You will be using the ratio of transit accessibility to car accessibility in your model predicting vehicle availability, so you should save the results for each alternative in its respective data folder.
 
 ```{r}
-write_csv(access_compare, file = here("existing", 
+write_csv(access_compare, file = here("alternative", 
                                       "data",
                                       "access_compare.csv"))
 ```

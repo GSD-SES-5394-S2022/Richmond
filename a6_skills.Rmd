@@ -1,0 +1,125 @@
+---
+title: "Skills for Analysis Assignment 6"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::material
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The following skills will be useful for Analysis Assignment 6. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in prior assignments. 
+
+# Required packages
+
+The skills in this tutorial draw on the here package, the tidyverse package, and the sf package, which are all familiar to you now.
+
+```{r, warning=FALSE, message=FALSE, results='hide'}
+library(here)
+library(tidyverse)
+library(sf)
+library(modelr)
+library(jtools)
+```
+
+# Load data
+
+We will estimate our model using the zone-level data you compiled in Assignment 3 and the accessibility data you in Assignment 5, so I'll load the csv files where I saved those results.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+access <- here("existing",
+               "data",
+               "access_compare.csv") %>%
+  read_csv()
+
+zones <- here("existing",
+               "data",
+               "zone_data.csv") %>%
+  read_csv()
+```
+
+# Select variables
+
+Now I will create a dataframe that includes the independent variables I want to include in my model. I'll choose:
+
+* The ratio of transit accessibility to car accessibility
+* The percentage of households with three or more people
+* The percentage of households in the first income quintile
+* The percentage of housholds in the fifteh income quintile
+
+And I will predict the percentage of zero-vehicle households.
+
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+model_data <- left_join(zones, access) %>%
+  mutate(pct_big_hh = (hh_3personE + hh_4person_plusE) / total_hhsE,
+         pct_lo_inc = inc_quint_1 / total_hhsE,
+         pct_hi_inc = inc_quint_5 / total_hhsE,
+         pct_no_veh = no_vehE / total_hhsE) %>%
+  select(GEOID, pct_big_hh, pct_lo_inc, pct_hi_inc, ratio, pct_no_veh)
+```
+
+# Visualize model variables
+
+It will be helpful to use scatter plots to visualize the relationships between our dependent variables and each independent variable. If you will be including these scatterplots in your report, you should spend some time styling them.
+
+Here is a scatterplot (without much styling) showing the relationship between the percentage of low-income households in a tract and the percentage of zero-vehicle households.
+
+```{r, warning = FALSE, message=FALSE}
+ggplot(model_data, aes(x = pct_lo_inc, y = pct_no_veh)) +
+  geom_point(size = 1, color = "blue") +
+  geom_smooth(size = 0.5, lty = "dashed", color = "blue", method = "lm")
+```
+
+
+# Estimate regression model
+
+Now I will estimate my regression model.
+
+```{r, results='markup'}
+model1 <- lm(pct_no_veh ~ pct_big_hh + pct_lo_inc + pct_hi_inc + ratio, data = model_data)
+
+export_summs(model1)
+```
+
+I see that two of my independent variables (the percentage of households with more than two people and the percentage of high-income households) do not have significant coefficients. I will try a second version of the model that excludes those variables and see what happens to the model fit.
+
+```{r}
+model2 <- lm(pct_no_veh ~ pct_lo_inc + ratio, data = model_data)
+
+export_summs(model1, model2)
+```
+
+The model fit (as indicated by the R-squared) is almost the same, so we'll move forward with this more parsimonious model.
+
+# Apply a regresion model
+
+First we'll load the data for the alternative condition and calculate the same variables we used in out model. Then we'll use the `add_predictions()` function to apply the results of the model we estimated based on existing data to the new data set. This will add a column called `pred` with the estimated percent of households without access to a vehicle.
+
+Finally, we can multiply that percentage by the total number of households to estimate the number of households without vehicle access. You might choose to create some maps and charts to illustrate the results of your analysis and compare your existing condition with the alternative condition.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+alt_access <- here("alternative",
+               "data",
+               "access_compare.csv") %>%
+  read_csv()
+
+alt_zones <- here("alternative",
+               "data",
+               "zone_data.csv") %>%
+  read_csv() %>%
+  left_join(access) %>%
+  mutate(pct_big_hh = (hh_3personE + hh_4person_plusE) / total_hhsE,
+         pct_lo_inc = inc_quint_1 / total_hhsE,
+         pct_hi_inc = inc_quint_5 / total_hhsE,
+         pct_no_veh = no_vehE / total_hhsE) %>%
+  add_predictions(model = model2) %>%
+  mutate(pct_no_veh = pred) %>%
+  mutate(no_vehE = round(total_hhsE * pct_no_veh)) 
+  
+```
+
