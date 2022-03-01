@@ -49,7 +49,7 @@ Now I will create a dataframe that includes the independent variables I want to 
 * The ratio of transit accessibility to car accessibility
 * The percentage of households with three or more people
 * The percentage of households in the first income quintile
-* The percentage of housholds in the fifteh income quintile
+* The percentage of housholds in the fifth income quintile
 
 And I will predict the percentage of zero-vehicle households.
 

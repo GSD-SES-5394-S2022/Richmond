@@ -211,7 +211,7 @@
 <li><a href="#required-packages">Required packages</a></li>
 <li><a href="#load-data">Load data</a></li>
 <li><a href="#select-variables">Select variables</a></li>
-<li><a href="#visulize-model-variables">Visulize model variables</a></li>
+<li><a href="#visualize-model-variables">Visualize model variables</a></li>
 <li><a href="#estimate-regression-model">Estimate regression model</a></li>
 <li><a href="#apply-a-regresion-model">Apply a regresion model</a></li>
 </ul>
@@ -258,7 +258,7 @@
 <li>The ratio of transit accessibility to car accessibility</li>
 <li>The percentage of households with three or more people</li>
 <li>The percentage of households in the first income quintile</li>
-<li>The percentage of housholds in the fifteh income quintile</li>
+<li>The percentage of housholds in the fifth income quintile</li>
 </ul>
 <p>And I will predict the percentage of zero-vehicle households.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>model_data <span class="ot">&lt;-</span> <span class="fu">left_join</span>(zones, access) <span class="sc">%&gt;%</span></span>
@@ -268,8 +268,8 @@
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">pct_no_veh =</span> no_vehE <span class="sc">/</span> total_hhsE) <span class="sc">%&gt;%</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">select</span>(GEOID, pct_big_hh, pct_lo_inc, pct_hi_inc, ratio, pct_no_veh)</span></code></pre></div>
 </div>
-<div id="visulize-model-variables" class="section level1">
-<h1>Visulize model variables</h1>
+<div id="visualize-model-variables" class="section level1">
+<h1>Visualize model variables</h1>
 <p>It will be helpful to use scatter plots to visualize the relationships between our dependent variables and each independent variable. If you will be including these scatterplots in your report, you should spend some time styling them.</p>
 <p>Here is a scatterplot (without much styling) showing the relationship between the percentage of low-income households in a tract and the percentage of zero-vehicle households.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(model_data, <span class="fu">aes</span>(<span class="at">x =</span> pct_lo_inc, <span class="at">y =</span> pct_no_veh)) <span class="sc">+</span></span>
