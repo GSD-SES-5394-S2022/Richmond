@@ -1,0 +1,270 @@
+---
+title: "Skills for Analysis Assignment 7"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::downcute
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The following skills will be useful for Analysis Assignment 7. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in prior assignments. 
+
+# Required packages
+
+In addition to the `here` and `tidyverse` packages, you'll be working with the `survey` and `srvyr` packages, which allow you to easily incorporate weighted survey data into your analysis.
+
+```{r, warning=FALSE, message=FALSE, results='hide'}
+library(here)
+library(tidyverse)
+library(survey)
+library(srvyr)
+library(naniar)
+library(jtools)
+library(knitr)
+```
+
+# Trip productions
+
+You will be estimating a household-level trip production model for home-based work (HBW), home-based other (HBO), and non-home-based trips.
+
+## Load NHTS data
+
+You can download NHTS data from https://nhts.ornl.gov/ (click "Download 2017 Data Now!", and then "2017 v1.2 .CSV files"). Then extract the files and load them into R using `read_csv()`. These files will probably be too large to keep push to GitHub, so you'd want to put them in a directory for large files and add the name of that directory to you .gitignore file.
+
+If you don't want to deal with all that, you can also use the following code to download them to a temporary file and load them from there. The downside to that approach is that you'll need to wait and download this big file every time you run this code chunk.
+
+The data download will be a zipped folder with the following four csv files:
+
+* hhpub.csv (household-level data)
+* perpub.csv (person-level data)
+* trippub.csv (trip-level data)
+* vehpub.csv (vehicle-level data)
+
+You'll probably want both the trip file and the household file.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+temp <- tempfile()
+download.file("https://nhts.ornl.gov/assets/2016/download/csv.zip", temp)
+
+trips <- read_csv(unz(temp, "trippub.csv"))
+hhs <- read_csv(unz(temp, "hhpub.csv"))
+
+unlink(temp)
+```
+
+## Select household-level variables
+
+You can find descriptions of the variables in each file in [the NHTS Codebook](https://nhts.ornl.gov/assets/codebook_v1.2.pdf){target="_blank"}. Pay attention to the headings at the top of each page. The Codebook lists all the variables in the household file, then the person file, then the trips file, then the vehicle file.
+
+Spend some time familiarizing yourself with the variables that are available to you. You want to estimate a model at the household level that only includes variables with a reasonable tract-level analog in the American Community Survey.
+
+When I compiled my zone-level data, I included the following variables:
+
+* Number of zero-vehicle households
+* Number of one-person households
+* Number of two-person households
+* Number of three-person households
+* Number of four-or-more-person households
+* Number of people in each of five income quintiles
+    * 1st quintile is less than $30k / year
+    * 2nd quintile is \$30k to \$50k
+    * 3rd quintile is \$50k to \$75k
+    * 4th quintile is \$75k to \$100k
+    * 5th quintile is greater than $100k
+
+The relevant household-level NHTS variables would be:
+
+* Number of household vehicles (HHVEHCNT)
+* Number of household members (HHSIZE)
+* Household income (HHFAMINC)
+
+I can use those variables to create the indicator variables I'll use in my regression (I'm using `replace_with_na()` from the `naniar` package to replace negative income values with NA to indicate that those are missing values).
+
+I also need:
+
+* the MSA identifier (HH_CSBA) so I can filter the data to my study area (Buffalo), 
+* the household ID numbers (HOUSEID) so I can associate trips from the trips file with the households they come from, and
+* the survey weight (WTHHFIN)
+
+```{r}
+buffalo_hhs <- hhs %>%
+  filter(HH_CBSA == "15380") %>%
+  mutate(inc_quint_ = case_when(HHFAMINC == "01" ~ "1st",
+                               HHFAMINC == "02" ~ "1st",
+                               HHFAMINC == "03" ~ "1st",
+                               HHFAMINC == "04" ~ "2nd",
+                               HHFAMINC == "05" ~ "2nd",
+                               HHFAMINC == "06" ~ "3rd",
+                               HHFAMINC == "07" ~ "4th",
+                               HHFAMINC == "08" ~ "5th",
+                               HHFAMINC == "09" ~ "5th",
+                               HHFAMINC == "10" ~ "5th",
+                               HHFAMINC == "11" ~ "5th",
+                               TRUE ~ "NA")) %>%
+  mutate(size_ = case_when(HHSIZE == 1 ~ "one",
+                              HHSIZE == 2 ~ "two",
+                              HHSIZE == 3 ~ "three",
+                              TRUE ~ "four_plus")) %>%
+  mutate(zero_veh_ = (HHVEHCNT == 0)) %>%
+  replace_with_na(list(inc_quint_ = "NA")) %>%
+  select(HOUSEID, zero_veh_, size_, inc_quint_, WTHHFIN) 
+```
+
+## Select trip-level variables
+
+The household file does include the number of trips produced by each household, but it doesn't differentiate them by trip purpose. We'll need to go into the trips file and do that ourselves.
+
+For this exercise, we just need to know whether a trip has an end (origin or destination) at home and whether a trip has an end at work. The variables WHYFROM and WHYTO will give us that information.
+
+We'll also want the household IDs so we can link these trips back to the households producing them.
+
+We'll add some indicators to flag if a trip begins or end at home (WHYTO or WHYFROM from would be 01 or 02) or at work (WHYTO or WHYFROM would be 03), and set up a simple trip purpose variable based on those flags. Then we'll use `group_by()` and `summarize()` to count the total number of trips in each household by each purpose. Finally, I'll use `pivot_wider()` to create a separate column for the number of trips in each trip purpose.
+
+I'm doing all of that below in one long set of piped functions - you should try breaking it down step-by-step to make sure you understand how it all works.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+trips_by_purpose <- trips %>% 
+  filter(HH_CBSA == "15380") %>%
+  select(HOUSEID, WHYFROM, WHYTO) %>%
+  mutate(home_based = case_when(WHYTO == "01" ~ TRUE,
+                                WHYTO == "02" ~ TRUE,
+                                WHYFROM == "01" ~ TRUE,
+                                WHYFROM == "02" ~ TRUE,
+                                TRUE ~ FALSE)) %>%
+  mutate(work = ifelse(WHYTO == "03" | WHYFROM == "03", TRUE, FALSE)) %>%
+  mutate(purpose = case_when(home_based & work ~ "HBW",
+                            home_based ~ "HBO",
+                            TRUE ~ "NHB")) %>%
+  group_by(HOUSEID, purpose) %>%
+  summarize(n = n()) %>%
+  pivot_wider(names_from = "purpose", values_from = "n") 
+  
+```
+## Join trip data to houshold data
+
+Now you can join the trip-level data to the household level data. In this example, I haven't filtered the trips data to my study area, but a left join will drop all rows that don't appear in the first data frame, so it will filter the trips to the study area since I've already filtered my households to the study area. Some households will not be in the trips data frame because they didn't report any survey-day trips. This will generate some NA values, so I'll replace those with zeros.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+hh_trips <- left_join(buffalo_hhs, trips_by_purpose) %>%
+  replace_na(list(HBW = 0,
+                  HBO = 0,
+                  NHB = 0))
+```
+
+## Create a survey object
+
+The survey package includes methods for working with survey weights, and the srvyr package is a wrapper for that package that works more nicely with tidyverse.
+
+We'll need to create a survey object to incorporate survey weights.
+
+```{r}
+svy_trips <- hh_trips %>%
+  as_survey(weights = WTHHFIN)
+```
+
+## Estimate a household-level regression model
+
+Now we can estimate a regression model to predict the number of HBO trips a household produces.
+
+```{r}
+HBO_model1 <- svyglm(HBO ~ zero_veh_ + size_ + inc_quint_, svy_trips)
+
+export_summs(HBO_model1, 
+             error_pos = "right", 
+             error_format = "(p = {p.value})",
+             model.names = "Full model")
+```
+
+Only household size is significant. Let's see what a model looks like that only includes household size.
+
+```{r}
+HBO_model2 <- svyglm(HBO ~ size_, svy_trips)
+
+export_summs(HBO_model1, HBO_model2,
+             error_pos = "right", 
+             error_format = "(p = {p.value})",
+             model.names = c("Full model", "Reduced model"))
+```
+
+Our sample size increases a little (since we're able to include some households that had missing values for income) and our R-squared value doesn't really change. So the reduced model is likely to be our preferred model.
+
+You'll follow a similar process for HBW and NHB trips.
+
+## Apply trip production model to zonal data
+
+Now we can load the zone data we generated for Assignment 2 and apply the coefficients from our preferred model to estimate the number of HBO productions.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+existing_zones <- here("existing",
+                       "data",
+                       "zone_data.csv") %>%
+  read_csv() %>%
+  mutate(hbo_prod = total_hhsE * HBO_model2$coefficients["(Intercept)"] +
+                    hh_1personE * HBO_model2$coefficients["size_one"] +
+                    hh_2personE * HBO_model2$coefficients["size_two"] +
+                    hh_3personE * HBO_model2$coefficients["size_three"])
+```
+
+Again, you'll need to do something similar for HBW and NHB trips as well (and for both the existing condition and the alternative condition, unless there is nothing in your model that differs between the two alternatives).
+
+# Trip Attractions
+
+You won't be estimating your own trip attraction model. Instead, apply the one from Table 4-4 of [NCHRP 716](https://www.trb.org/Publications/Blurbs/167055.aspx){target="_blank"}. Shown below for your convenience.
+
+![](images/NCHRP-716-4-4.png)
+
+To estimate the number of HBO trips in a model that does includes non-motorized modes, I would use "Model 3" from the top half of the table (since I don't have school enrollment data). Before doing this calculation, you may need to replace missing (NA) employment values with zeros.
+
+*Important:* If you want to exclude non-motorized trips from your model, you can use the bottom half of Table 4-4, **but** in that case, you need to make sure that you're filtering non-motorized trips out of the NHTS data before you use it to estimate trip productions.
+
+```{r}
+existing_zones <- existing_zones %>%
+  replace_na(list(basic_emp = 0,
+                  retail_emp = 0, 
+                  service_emp = 0)) %>%
+  mutate(hbo_attr = 0.7 * total_hhsE +
+                    0.7 * basic_emp +
+                    8.4 * retail_emp +
+                    3.5 * service_emp)
+```
+
+# Balancing productions and attractions
+
+Let's compare the total number of trip productions to the total number of trip attractions. I'm setting this up in a table just to give an example of how you might quickly compare productions and attractions for multiple trip purposes.
+
+```{r}
+trip_end_summary <- tibble(Purpose = c("HBO"),
+                           Productions = c(sum(existing_zones$hbo_prod)),
+                           Attractions = c(sum(existing_zones$hbo_attr)),
+                           Difference = c(sum(existing_zones$hbo_attr) - 
+                                            sum(existing_zones$hbo_prod)))
+
+kable(trip_end_summary, format.args = list(big.mark = ","))
+```
+
+Overall, my trip attraction model is estimating about 280,000 more trips than my trip production model. I'll scale my trip attractions so the regional total matches the total number of trip productions.
+
+```{r}
+existing_zones <- existing_zones %>%
+  mutate(hbo_attr_bal = hbo_attr * 
+           sum(existing_zones$hbo_prod) / sum(existing_zones$hbo_attr))
+```
+
+Now I can check the totals again.
+
+```{r}
+trip_end_summary <- tibble(Purpose = c("HBO"),
+                           Productions = c(sum(existing_zones$hbo_prod)),
+                           Attractions = c(sum(existing_zones$hbo_attr_bal)),
+                           Difference = c(sum(existing_zones$hbo_attr_bal) - 
+                                            sum(existing_zones$hbo_prod)))
+
+kable(trip_end_summary, format.args = list(big.mark = ","))
+```
+
+At this point, it may be useful to create some chloropleth maps and/or dot-density maps to show how trip productions and attractions are distributed throughout your study area. Refer to the [Assignment 2 skills page](https://gsd-ses-5394-s2022.github.io/Richmond/a2_skills.html){target="_blank"} for a refresher on how to do that. Please be creative in coming up with other ways to present your results as well.
