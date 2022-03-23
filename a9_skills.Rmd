@@ -1,0 +1,277 @@
+---
+title: "Skills for Analysis Assignment 6"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::material
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The following skills will be useful for Analysis Assignment 8. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in prior assignments. 
+
+# Required packages
+
+The skills in this tutorial draw on the here package, the tidyverse package, and the sf package, which are all familiar to you now.
+
+```{r, warning=FALSE, message=FALSE, results='hide'}
+library(here)
+library(tidyverse)
+library(sf)
+library(knitr)
+library(kableExtra)
+library(survey)
+library(srvyr)
+```
+
+# Estimate driving cost per minute
+
+We can use NHTS data to estimate the total annual time spent driving and total annual fuel expenditures across the study area. 
+
+We'll need the trips file and the vehicles file. In the trips file, I only want trips where there resondent was the driver. In both files, I only want to include households in Buffalo (GEOID is 15380)
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+temp <- tempfile()
+download.file("https://nhts.ornl.gov/assets/2016/download/csv.zip", temp)
+
+vehs <- read_csv(unz(temp, "vehpub.csv"), 
+                 show_col_types = FALSE) %>%
+  filter(HH_CBSA == "15380")
+
+trips <- read_csv(unz(temp, "trippub.csv"), 
+                      show_col_types = FALSE) %>%
+  filter(HH_CBSA == "15380")
+
+car_trips <- trips %>%
+  filter(PSGR_FLG == "02") 
+  
+unlink(temp)
+```
+
+And we'll need to create a survey object for both of those tables. Note that the trip weights variable is set for estimating annual trips.
+
+```{r}
+car_trips_svy <- car_trips %>%
+  as_survey(weights = WTTRDFIN)
+
+veh_svy <- vehs %>%
+  as_survey(weights = WTHHFIN)
+```
+
+Now we can calculate the total annual time spend driving cars and the total fuel expenditure across the region.
+
+```{r}
+total_time <- car_trips_svy %>%
+  summarise(total_time = survey_total(TRVLCMIN))
+
+kable(total_time, format.args = list(big.mark = ",",
+                                     scientific = FALSE))
+```
+
+Households in Buffalo spend a total of about 13 billion minutes driving in cars annually. Since the region's population is just over 1 million, that's around 13 thousand annual minutes per person or 36 daily minutes per person.
+
+```{r}
+total_gas_cost <- veh_svy %>%
+  summarise(total_cost = survey_total(GSTOTCST))
+
+kable(total_gas_cost, format.args = list(big.mark = ","))
+```
+
+Households in Buffalo spend a total of about \$1 billion dollars on gasoline annually. Since the population of the study area is just over 1 million people, that's about \$1000 per person per year or \$2.70 per person per day.
+
+```{r}
+cost_per_minute <- total_gas_cost$coef[1] / total_time$coef[1] 
+
+cost_per_minute
+```
+
+Buffalo households spend about 7.6 cents per minute to operate a car.
+
+# Estimate existing mode shares
+
+We'll be calibrating our mode choice model to the existing regional mode shares, so we'll need to calculate the overall mode share for each of our three trip purposes
+
+Note that I'm grouping car, truck, van, SUV, golfcart/segway, RV (including both mobile homes and snowmobiles), and motorcycle/moped all as "car". You might choose to group things differently. The hard-to-classify modes are also fairly infrequent, so moving them among categories won't change your result very much.
+
+```{r}
+trips <- trips %>%
+  mutate(home_based = case_when(WHYTO == "01" ~ TRUE,
+                                WHYTO == "02" ~ TRUE,
+                                WHYFROM == "01" ~ TRUE,
+                                WHYFROM == "02" ~ TRUE,
+                                TRUE ~ FALSE)) %>%
+  mutate(work = ifelse(WHYTO == "03" | WHYFROM == "03", TRUE, FALSE)) %>%
+  mutate(purpose = case_when(home_based & work ~ "HBW",
+                            home_based ~ "HBO",
+                            TRUE ~ "NHB")) %>%
+  mutate(mode = case_when(TRPTRANS == "01" ~ "walk",
+                          TRPTRANS == "02" ~ "bike",
+                          TRPTRANS == "03" ~ "car",
+                          TRPTRANS == "04" ~ "car",
+                          TRPTRANS == "05" ~ "car",
+                          TRPTRANS == "06" ~ "car",
+                          TRPTRANS == "08" ~ "car",
+                          TRPTRANS == "17" ~ "car",
+                          TRPTRANS == "18" ~ "car",
+                          TRPTRANS == "10" ~ "transit",
+                          TRPTRANS == "11" ~ "transit",
+                          TRPTRANS == "12" ~ "transit",
+                          TRPTRANS == "13" ~ "transit",
+                          TRPTRANS == "16" ~ "transit",
+                          TRUE ~ "other")) %>%
+  filter(mode != "other")
+```
+
+Now I can create a survey object and use it to generate the number of trips by mode
+
+```{r}
+trips_svy <- trips %>%
+  as_survey(weights = WTTRDFIN)
+
+mode_by_purpose <- trips_svy %>%
+  group_by(purpose, mode) %>%
+  survey_tally() %>%
+  select(-n_se) %>%
+  pivot_wider(names_from = mode,
+              values_from = n,
+              names_prefix = "n_",) %>%
+  mutate(n_trips = n_bike + n_car + n_transit + n_walk) %>%
+  mutate(pct_bike = n_bike / n_trips) %>%
+  mutate(pct_car = n_car / n_trips) %>%
+  mutate(pct_walk = n_walk / n_trips) %>%
+  mutate(pct_transit = n_transit / n_trips)
+```
+
+
+# Estimate transit cost per unlinked trip
+
+The National Transit Database includes information on the total annual fare revenue for each transit agency and the total number of annual unlinked trips. The easiest way to grab that data for an individual transit agency is to search for the transit agency profile [here](https://www.transit.dot.gov/ntd/transit-agency-profiles){target = "_blank"}.
+
+Here's what the one for Niagara Frontier Transportation Authority (the agency serving Buffalo) looks like:
+
+![](images/NTD-profile.png)
+
+You can see that the annual fare revenue is \$34,814,699 and there were 23,851,680 annual unlinked trips, for an average fare per unlinked trip of \$1.46 per unlinked trip. Note that this is probably lower than the posted fare due to various discounts, transfer policies, and the use of transit passes.
+
+```{r}
+cost_per_ride <- 34814699 / 23851680
+
+cost_per_ride
+```
+
+# Calculate (money) costs per trip
+
+First I'll load the skims I generated in Assignment 4.
+
+```{r, message=FALSE, warning=FALSE}
+skims <- here("existing",
+              "data",
+              "skims.csv") %>%
+  read_csv(show_col_types = FALSE)
+
+head(skims, 5) %>%
+  kable() %>%
+  kable_styling() %>%
+  scroll_box(width = "500px", height = "320px")
+```
+
+This gives me a detailed breakdown of the travel time for each of three modes. I'll need to add information about the cost of transit and the cost of driving. 
+
+```{r}
+skims <- skims %>%
+  mutate(drive_cost = car_time * cost_per_minute) %>%
+  mutate(transit_cost = n_rides * cost_per_ride)
+```
+
+If someone carpools, they can split the cost of driving among all vehicle occupants. Table 4.16 of NCHRP 716 indicates that, for HBW trips, the average vehicle occupance of 2+ carpools is 2.42, so we'll divide the cost of driving by 2.42 to get the cost of carpooling.
+
+```{r}
+skims <- skims %>%
+  mutate(carpool_cost = drive_cost / 2.42)
+```
+
+# Select a model
+
+Without detailed origin-destination data (which regional travel surveys do collect, but don't release publicly), we can't estimate our own mode choice model, so you'll select one from NCHRP 716. 
+
+For home-based work trips, you have the following 9 models to select from:
+
+![](images/NCHRP 4-7.png)
+
+All groups are working on study areas with more than 1 million residents, so you should not select model A. If you are including non-motorized modes in your model, you should select model H or model I. You will find it useful to make a distinction between shared rides (carpooling) and driving alone, but you most of you probably don't need to make a distinction between local, premium, and rail service, so if you aren't includind non-motorized modes, I recommend choosing model B, C, or G.
+
+You can find the coefficients for your selected model in Table 4-8.
+
+![](images/NCHRP 4-8.png)
+
+For this example, I'll demonstrate the application of model H and and model I (for your assignment, you only need to choose one model to apply).
+
+# Apply a selected mode-choice model
+
+A logistic regression predicts the log-odds of selecting a particular alternative. I can start by predicting the log-odds of taking transit. 
+
+Model H differentiates between time spent walking to transit, time spend waiting for the initial transit vehicle, and time spent waiting for a transfer vehicle (although these two types of wait times do have the same coefficient, so they could easily be combined). 
+
+Model I lumps all out-of-vehicle time into a single value.
+
+
+
+```{r}
+transit_share_HBW <- mode_by_purpose$pct_transit[
+  mode_by_purpose$purpose == "HBW"]
+
+transit_const_HBW_H <- log(transit_share_HBW / 
+                             (1 - transit_share_HBW))
+
+transit_const_HBW_I <- transit_const_HBW_H
+
+skims <- skims %>%
+  mutate(log_odds_transit_HBW_H = 
+           transit_const_HBW_H +
+           -0.033 * ride_time +
+           -0.093 * (access_time + egress_time) +
+           -0.038 * wait_time +
+           -0.038 * transfer_time +
+           -0.0021 * transit_cost) %>%
+  mutate(log_odds_transit_HBW_I =
+           transit_const_HBW_I +
+           -0.025 * ride_time +
+           -0.05 * (access_time + 
+                      egress_time +
+                      wait_time +
+                      transfer_time) +
+           -0.005 * transit_cost) %>%
+  mutate(odds_transit_HBW_H = exp(log_odds_transit_HBW_H)) %>%
+  mutate(odds_transit_HBW_I = exp(log_odds_transit_HBW_I)) %>%
+  mutate(p_transit_HBW_H = odds_transit_HBW_H / 
+           (1 + odds_transit_HBW_H)) %>%
+  mutate(p_transit_HBW_I = odds_transit_HBW_I / 
+           (1 + odds_transit_HBW_I)) %>%
+  replace_na(list(p_transit_HBW_H = 0,
+                  p_transit_HBW_I = 0))
+  
+```
+
+Now I can exponentiate that value to get the odds of taking transit for a trip.
+
+```{r}
+skims <- skims %>%
+  mutate(odds_transit_H = exp(log_odds_transit_H)) %>%
+  mutate(odds_transit_I = exp(log_odds_transit_I))
+  
+```
+
+Odds are the ratio of the probability that something will happen to the probability that it won't happen. We can convert odds to probabilities with the formula:
+
+$p = \frac{odds}{1 + odds}$
+
+```{r}
+skims <- skims %>%
+  mutate(p_carpool = odds_carpool / (1 + odds_carpool))
+```
+
+

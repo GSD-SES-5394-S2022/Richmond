@@ -43,3 +43,6 @@ vignettes/*.pdf
 
 # image files
 images/
+
+#map annotation tiles cache
+rosm.cache/

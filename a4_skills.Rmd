@@ -348,7 +348,7 @@ library(r5r)
 Then you'll need to setup an R5 core associated with the directory with your existing networks (a GTFS file for transit and a pbf file for OpenStreetMap data).
 
 ```{r, eval=FALSE}
-alternative_core <- here("alternative",
+existing_core <- here("existing",
                       "networks") %>%
   setup_r5(verbose = FALSE)
 ```
@@ -356,7 +356,7 @@ alternative_core <- here("alternative",
 This will create some additional files and save them to your networks directory. Now you can generate a travel time matrix for each mode. Here's how you can generate a driving skim.
 
 ```{r, eval=FALSE}
-car_skim_alt <- travel_time_matrix(alternative_core, 
+car_skim_existing <- travel_time_matrix(existing_core, 
                      origins = centroids,
                      destinations = centroids,
                      mode = "CAR")
@@ -375,7 +375,7 @@ Also, some of your later analyses will require you to differentiate between in-v
 ```{r, eval=FALSE}
 library(lubridate)
 
-transit_skim_alt <- travel_time_matrix(alternative_core, 
+transit_skim_existing <- travel_time_matrix(existing_core, 
                      origins = centroids,
                      destinations = centroids,
                      mode = "TRANSIT",
@@ -405,7 +405,7 @@ n_rides: The number of separate routes the traveler uses.
 Some of the rows in the transit skim have a value of zero for n_rides. These are trips where a transit-dependent traveler would have walked rather than use any available transit service (because there is no transit service connecting the origin to the destination that offers travel-time savings over walking). Since these are not really transit trips, we can exclude them from the skim.
 
 ```{r, eval=FALSE}
-transit_skim_alt <- transit_skim_alt %>%
+transit_skim_existing <- transit_skim_existing %>%
   filter(n_rides > 0)
 ```
 
@@ -414,19 +414,25 @@ Once you've generated skims for each of the modes you want to include in your mo
 Prior to joining the skims you should rename the travel_time column to specify a mode.
 
 ```{r, eval=FALSE}
-car_skim_alt <- car_skim_alt %>%
+car_skim_existing <- car_skim_existing %>%
   rename(car_time = travel_time) 
 
-transit_skim_alt <- transit_skim_alt %>%
+transit_skim_existing <- transit_skim_existing %>%
   rename(transit_time = travel_time) 
 
-walk_skim_alt <- walk_skim_alt %>%
+walk_skim_existing <- walk_skim_existing %>%
   rename(walk_time = travel_time)
 
-all_skims_alt <- full_join(transit_skim_alt, car_skim_alt) %>%
-  full_join(walk_skim_alt)
+bike_skim_existing <- bike_skim_existing %>%
+  rename(bike_time = travel_time)
 
-write_csv(all_skims_alt, here("alternative/data/skims.csv"))
+all_skims_existing <- full_join(transit_skim_existing, 
+                                car_skim_existing) %>%
+  full_join(walk_skim_existing) %>%
+  full_join(bike_skim_existing)
+
+write_csv(all_skims_existing, 
+          here("existing/data/skims.csv"))
 ```
 
 # Install a package from GitHub
