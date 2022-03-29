@@ -183,7 +183,7 @@ Since the value of $A_i$ depends of the value of $B_j$ and the value of $B_j$ de
 * *friction_o_id*: The name of a column in `friction` containing the ID for the origin/production zone,
 * *friction_d_id*: The name of a column in `friction` containing the ID for the destination/attraction zone,
 * *friction_factor*: The name of a column in `friction` containing the friction factor for each origin-destination (or production-attraction) pair,
-* *tolerance*: The minimum acceptable tolerance for trip estimates. In the example below, I'm setting this to 5, meaning I'll accept a set of flows where the total number of productions and attractions are within 5 trips of what I estimated in the trip generation step.
+* *tolerance*: The minimum acceptable tolerance for trip estimates. In the example below, I'm setting this to 0.01, meaning I'll accept a set of flows where the total number of productions and attractions are within one percent of what I estimated in the trip generation step.
 * *max_iter*: The maximum number of iterations. In this example, I'm setting this to 50,000, so that if I don't achieve my desired tolerance within 50,000 iterations, I'll stop the process anyway. This will keep me from getting stuck in an endless loop if I set a very low tolerance than I can't achieve due to rounding error.
 
 ```{r}
@@ -195,7 +195,7 @@ HBO_dist <- grvty_balancing(od_zones = zones,
                             friction_o_id = "fromId",
                             friction_d_id = "toId",
                             friction_factor = "F_HBO",
-                            tolerance = 5,
+                            tolerance = 0.01,
                             max_iter = 50000)
 ```
 
@@ -246,13 +246,13 @@ convergence_points <- HBO_dist$convergence %>%
 
 ggplot(convergence_points) +
   geom_line(aes(x = iteration, y = max_diff, lty = which_max)) +
-  scale_y_continuous(name = "Maximum difference from target value",
+  scale_y_continuous(name = "Percent difference from target value",
                      trans = "log", 
-                     breaks = breaks <- 10^seq(1,5, by=1),
+                     breaks = breaks <- 10^seq(-2,4, by=1),
                      labels = formatC(breaks, 
                                       big.mark = ",", 
                                       format = "f", 
-                                      digits = 0)) +
+                                      digits = 2)) +
   scale_x_continuous(name = "Iteration",
                      breaks = breaks <- seq(0, 14000, by=2000),
                      labels = formatC(breaks, 
@@ -332,4 +332,4 @@ HBO_mean_time <- sum(skims$total_time) / sum(skims$HBO_flow)
 HBO_mean_time
 ```
 
-Our gravity model generates a PA matrix for HBO trips with an average travel time of 8.8 minutes. Our calculations from NHTS data suggest an average travel time of 17.9 minutes. Experiment with different decay functions. You could choose an entirely different functional form (e.g. a gamma function instead of an exponential function) or fiddle around with the parameters on the function you're already using. See if you can narrow the gap between the predicted and observed average travel times.
+Our gravity model generates a PA matrix for HBO trips with an average travel time of 12.1 minutes. Our calculations from NHTS data suggest an average travel time of 17.9 minutes. Experiment with different decay functions. You could choose an entirely different functional form (e.g. a gamma function instead of an exponential function) or fiddle around with the parameters on the function you're already using. See if you can narrow the gap between the predicted and observed average travel times.
