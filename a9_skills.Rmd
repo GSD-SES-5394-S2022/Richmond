@@ -1,9 +1,9 @@
 ---
-title: "Skills for Analysis Assignment 6"
+title: "Skills for Analysis Assignment 9"
 author: "GSD SES 5394"
 date: "Spring 2022"
 output: 
-  rmdformats::material
+  rmdformats::downcute
 ---
 
 ```{r setup, include=FALSE}
@@ -12,7 +12,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Overview
 
-The following skills will be useful for Analysis Assignment 8. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in prior assignments. 
+The following skills will be useful for Analysis Assignment 9. This is not a complete list of everything you will need to do to complete the assignment; but it includes an overview of skills that you will not have encountered in prior assignments. 
 
 # Required packages
 
@@ -28,11 +28,31 @@ library(survey)
 library(srvyr)
 ```
 
-# Estimate driving cost per minute
+# Calculating cost variables
+
+The model we'll be applying has coefficients for the cost of driving and the cost of transit.
+
+## Transit fare per unlinked trip
+
+The National Transit Database includes information on the total annual fare revenue for each transit agency and the total number of annual unlinked trips. The easiest way to grab that data for an individual transit agency is to search for the transit agency profile [here](https://www.transit.dot.gov/ntd/transit-agency-profiles){target="_blank"}.
+
+Here's what the one for Niagara Frontier Transportation Authority (the agency serving Buffalo) looks like:
+
+![](images/NTD-profile.png)
+
+You can see that the annual fare revenue is \$34,814,699 and there were 23,851,680 annual unlinked trips, for an average fare per unlinked trip of \$1.46 per unlinked trip. Note that this is probably lower than the posted fare due to various discounts, transfer policies, and the use of transit passes.
+
+```{r}
+cost_per_ride <- 34814699 / 23851680
+
+cost_per_ride
+```
+
+## Driving cost per minute
 
 We can use NHTS data to estimate the total annual time spent driving and total annual fuel expenditures across the study area. 
 
-We'll need the trips file and the vehicles file. In the trips file, I only want trips where there resondent was the driver. In both files, I only want to include households in Buffalo (GEOID is 15380)
+We'll need the trips file and the vehicles file. In the trips file, I only want trips where there respondent was the driver. In both files, I only want to include households in Buffalo (GEOID is 15380)
 
 ```{r, message=FALSE, warning=FALSE, results='hide'}
 temp <- tempfile()
@@ -72,6 +92,8 @@ kable(total_time, format.args = list(big.mark = ",",
                                      scientific = FALSE))
 ```
 
+
+
 Households in Buffalo spend a total of about 13 billion minutes driving in cars annually. Since the region's population is just over 1 million, that's around 13 thousand annual minutes per person or 36 daily minutes per person.
 
 ```{r}
@@ -84,12 +106,43 @@ kable(total_gas_cost, format.args = list(big.mark = ","))
 Households in Buffalo spend a total of about \$1 billion dollars on gasoline annually. Since the population of the study area is just over 1 million people, that's about \$1000 per person per year or \$2.70 per person per day.
 
 ```{r}
-cost_per_minute <- total_gas_cost$coef[1] / total_time$coef[1] 
+cost_per_minute <- total_gas_cost$total_cost[1] / total_time$total_time[1] 
 
 cost_per_minute
 ```
 
 Buffalo households spend about 7.6 cents per minute to operate a car.
+
+## Costs per trip
+
+First I'll load the skims I generated in Assignment 4.
+
+```{r, message=FALSE, warning=FALSE}
+skims <- here("existing",
+              "data",
+              "skims.csv") %>%
+  read_csv(show_col_types = FALSE)
+
+head(skims, 5) %>%
+  kable() %>%
+  kable_styling() %>%
+  scroll_box(width = "500px", height = "320px")
+```
+
+This gives me a detailed breakdown of the travel time for each of three modes. I'll need to add information about the cost of transit and the cost of driving. Depending on whether Buffalo charges a full fare for transfers, this may underestimate the cost of a one-seat ride and overestimate the cost of a ride with transfers.
+
+```{r}
+skims <- skims %>%
+  mutate(drive_cost = car_time * cost_per_minute) %>%
+  mutate(transit_cost = n_rides * cost_per_ride)
+```
+
+If someone carpools, they can split the cost of driving among all vehicle occupants. Table 4.16 of NCHRP 716 indicates that, for HBW trips, the average vehicle occupance of 2+ carpools is 2.42, so we'll divide the cost of driving by 2.42 to get the cost of carpooling.
+
+```{r}
+skims <- skims %>%
+  mutate(carpool_cost = drive_cost / 2.42)
+```
 
 # Estimate existing mode shares
 
@@ -110,13 +163,20 @@ trips <- trips %>%
                             TRUE ~ "NHB")) %>%
   mutate(mode = case_when(TRPTRANS == "01" ~ "walk",
                           TRPTRANS == "02" ~ "bike",
-                          TRPTRANS == "03" ~ "car",
-                          TRPTRANS == "04" ~ "car",
-                          TRPTRANS == "05" ~ "car",
-                          TRPTRANS == "06" ~ "car",
-                          TRPTRANS == "08" ~ "car",
-                          TRPTRANS == "17" ~ "car",
-                          TRPTRANS == "18" ~ "car",
+                          TRPTRANS == "03" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "04" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "05" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "06" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "08" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "17" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "18" & NUMONTRP > 1 ~ "HOV",
+                          TRPTRANS == "03" ~ "SOV",
+                          TRPTRANS == "04" ~ "SOV",
+                          TRPTRANS == "05" ~ "SOV",
+                          TRPTRANS == "06" ~ "SOV",
+                          TRPTRANS == "08" ~ "SOV",
+                          TRPTRANS == "17" ~ "SOV",
+                          TRPTRANS == "18" ~ "SOV",
                           TRPTRANS == "10" ~ "transit",
                           TRPTRANS == "11" ~ "transit",
                           TRPTRANS == "12" ~ "transit",
@@ -139,139 +199,306 @@ mode_by_purpose <- trips_svy %>%
   pivot_wider(names_from = mode,
               values_from = n,
               names_prefix = "n_",) %>%
-  mutate(n_trips = n_bike + n_car + n_transit + n_walk) %>%
+  mutate(n_trips = n_bike + n_SOV + n_HOV + n_transit + n_walk) %>%
   mutate(pct_bike = n_bike / n_trips) %>%
-  mutate(pct_car = n_car / n_trips) %>%
+  mutate(pct_SOV = n_SOV / n_trips) %>%
+  mutate(pct_HOV = n_HOV / n_trips) %>%
   mutate(pct_walk = n_walk / n_trips) %>%
-  mutate(pct_transit = n_transit / n_trips)
+  mutate(pct_transit = n_transit / n_trips) %>%
+  select(purpose, pct_bike, pct_SOV, pct_HOV, pct_transit, pct_walk)
+
+mode_by_purpose
 ```
 
-
-# Estimate transit cost per unlinked trip
-
-The National Transit Database includes information on the total annual fare revenue for each transit agency and the total number of annual unlinked trips. The easiest way to grab that data for an individual transit agency is to search for the transit agency profile [here](https://www.transit.dot.gov/ntd/transit-agency-profiles){target = "_blank"}.
-
-Here's what the one for Niagara Frontier Transportation Authority (the agency serving Buffalo) looks like:
-
-![](images/NTD-profile.png)
-
-You can see that the annual fare revenue is \$34,814,699 and there were 23,851,680 annual unlinked trips, for an average fare per unlinked trip of \$1.46 per unlinked trip. Note that this is probably lower than the posted fare due to various discounts, transfer policies, and the use of transit passes.
-
-```{r}
-cost_per_ride <- 34814699 / 23851680
-
-cost_per_ride
-```
-
-# Calculate (money) costs per trip
-
-First I'll load the skims I generated in Assignment 4.
-
-```{r, message=FALSE, warning=FALSE}
-skims <- here("existing",
-              "data",
-              "skims.csv") %>%
-  read_csv(show_col_types = FALSE)
-
-head(skims, 5) %>%
-  kable() %>%
-  kable_styling() %>%
-  scroll_box(width = "500px", height = "320px")
-```
-
-This gives me a detailed breakdown of the travel time for each of three modes. I'll need to add information about the cost of transit and the cost of driving. 
-
-```{r}
-skims <- skims %>%
-  mutate(drive_cost = car_time * cost_per_minute) %>%
-  mutate(transit_cost = n_rides * cost_per_ride)
-```
-
-If someone carpools, they can split the cost of driving among all vehicle occupants. Table 4.16 of NCHRP 716 indicates that, for HBW trips, the average vehicle occupance of 2+ carpools is 2.42, so we'll divide the cost of driving by 2.42 to get the cost of carpooling.
-
-```{r}
-skims <- skims %>%
-  mutate(carpool_cost = drive_cost / 2.42)
-```
 
 # Select a model
 
 Without detailed origin-destination data (which regional travel surveys do collect, but don't release publicly), we can't estimate our own mode choice model, so you'll select one from NCHRP 716. 
 
+## HBW mode choice models from NCHPR 716
+
 For home-based work trips, you have the following 9 models to select from:
 
 ![](images/NCHRP 4-7.png)
 
-All groups are working on study areas with more than 1 million residents, so you should not select model A. If you are including non-motorized modes in your model, you should select model H or model I. You will find it useful to make a distinction between shared rides (carpooling) and driving alone, but you most of you probably don't need to make a distinction between local, premium, and rail service, so if you aren't includind non-motorized modes, I recommend choosing model B, C, or G.
-
-You can find the coefficients for your selected model in Table 4-8.
+And here are the model coefficients for those:
 
 ![](images/NCHRP 4-8.png)
 
-For this example, I'll demonstrate the application of model H and and model I (for your assignment, you only need to choose one model to apply).
+All teams are working on study areas with more than 1 million residents, so you should _not_ select model A. If you are including non-motorized modes in your model, you should select model H or model I. You will find it useful to make a distinction between shared rides (carpooling) and driving alone, but you most of you probably don't need to make a distinction between local, premium, and rail service, so if you aren't including non-motorized modes, I recommend choosing model B, C, or G.
+
+## HBO mode choice models from NCHPR 716
+
+For home-based other trips, you have the following 8 models to select from:
+
+![](images/NCHRP 4-10.png)
+And here are the model coefficients for those:
+
+![](images/NCHRP 4-11.png)
+
+Again, all teams are working on study areas with more than 1 million residents, so you should _not_ select model A or L. If you are including non-motorized modes in your model, you should select model I. 
+
+If you aren't including non-motorized modes, G or J might be reasonable. Note that neither is a nested model, although G does include SOVs and HOVs as separate modes. 
+
+## NHB mode choice models from NCHPR 716
+
+And for non-home-based trips, you have the following 11 models to select from:
+
+![](images/NCHRP 4-13.png)
+
+And here are the model coefficients for those:
+
+![](images/NCHRP 4-14.png)
+
+Again, all teams are working on study areas with more than 1 million residents, so you should _not_ select model A, L, or O. If you are including non-motorized modes in your model, you might select model M. If you aren't including non-motorized modes, N looks be reasonable (do pay attention to the footnotes).
 
 # Apply a selected mode-choice model
 
-A logistic regression predicts the log-odds of selecting a particular alternative. I can start by predicting the log-odds of taking transit. 
+In this example, I'll demonstrate how I would apply Model I to estimate the mode shares for HBO trips.
 
-Model H differentiates between time spent walking to transit, time spend waiting for the initial transit vehicle, and time spent waiting for a transfer vehicle (although these two types of wait times do have the same coefficient, so they could easily be combined). 
+## Calculate mode-specific constants
 
-Model I lumps all out-of-vehicle time into a single value.
-
-
+None of the tables from NCHRP provide mode-specific constants, so we'll use the overall log-odds for each mode as an initial value, and then calibrate that value as needed. 
 
 ```{r}
-transit_share_HBW <- mode_by_purpose$pct_transit[
-  mode_by_purpose$purpose == "HBW"]
+SOV_share_HBO <- mode_by_purpose$pct_SOV[mode_by_purpose$purpose == "HBO"]
+HOV_share_HBO <- mode_by_purpose$pct_HOV[mode_by_purpose$purpose == "HBO"]
+transit_share_HBO <- mode_by_purpose$pct_transit[mode_by_purpose$purpose == "HBO"]
+walk_share_HBO <- mode_by_purpose$pct_walk[mode_by_purpose$purpose == "HBO"]
+bike_share_HBO <- mode_by_purpose$pct_bike[mode_by_purpose$purpose == "HBO"]
 
-transit_const_HBW_H <- log(transit_share_HBW / 
-                             (1 - transit_share_HBW))
+SOV_const_HBO <- log(SOV_share_HBO / (1 - SOV_share_HBO))
+HOV_const_HBO <- log(HOV_share_HBO / (1 - HOV_share_HBO))
+transit_const_HBO <- log(transit_share_HBO / (1 - transit_share_HBO))
+walk_const_HBO <- log(walk_share_HBO / (1 - walk_share_HBO))
+bike_const_HBO <- log(bike_share_HBO / (1 - bike_share_HBO))
+```
 
-transit_const_HBW_I <- transit_const_HBW_H
+## Estimate utility of each mode
 
+Now I'll apply the model from NCHRP Table 4.11 to estimate the utility of each mode based on the coefficients from NCHRP Table 4.11. I'm going to assume the cost of parking is zero for all zones.
+
+This is a nested model. The total utility for a nest with m modes in the nest is given by the logsum:
+
+$U_{nest} = log{\sum\limits_{m} e^{U_{m}}}$
+
+```{r}
 skims <- skims %>%
-  mutate(log_odds_transit_HBW_H = 
-           transit_const_HBW_H +
-           -0.033 * ride_time +
-           -0.093 * (access_time + egress_time) +
-           -0.038 * wait_time +
-           -0.038 * transfer_time +
-           -0.0021 * transit_cost) %>%
-  mutate(log_odds_transit_HBW_I =
-           transit_const_HBW_I +
-           -0.025 * ride_time +
-           -0.05 * (access_time + 
-                      egress_time +
-                      wait_time +
-                      transfer_time) +
-           -0.005 * transit_cost) %>%
-  mutate(odds_transit_HBW_H = exp(log_odds_transit_HBW_H)) %>%
-  mutate(odds_transit_HBW_I = exp(log_odds_transit_HBW_I)) %>%
-  mutate(p_transit_HBW_H = odds_transit_HBW_H / 
-           (1 + odds_transit_HBW_H)) %>%
-  mutate(p_transit_HBW_I = odds_transit_HBW_I / 
-           (1 + odds_transit_HBW_I)) %>%
-  replace_na(list(p_transit_HBW_H = 0,
-                  p_transit_HBW_I = 0))
+  mutate(utility_transit_HBO = transit_const_HBO +
+                               ride_time * -0.008  +
+                               (access_time + 
+                                 egress_time +
+                                 wait_time +
+                                 transfer_time) * -0.025 +
+                               transit_cost * -0.01,
+         utility_SOV_HBO = SOV_const_HBO +
+                           car_time * -0.008 +
+                           drive_cost * -0.01,
+         utility_HOV_HBO = HOV_const_HBO +
+                           car_time * -0.008 +
+                           carpool_cost * -0.01,
+         utility_walk_HBO = walk_const_HBO +
+                            walk_time * -0.025,
+         utility_bike_HBO = bike_const_HBO +
+                            bike_time * -0.025) %>%
+  mutate(exp_u_walk_HBO = exp(utility_walk_HBO),
+         exp_u_bike_HBO = exp(utility_bike_HBO),
+         exp_u_SOV_HBO = exp(utility_SOV_HBO),
+         exp_u_HOV_HBO = exp(utility_HOV_HBO),
+         exp_u_transit_HBO = exp(utility_transit_HBO)) %>%
+  rowwise() %>%
+  mutate(utility_active_HBO = log(sum(exp_u_walk_HBO, 
+                                          exp_u_bike_HBO, 
+                                          na.rm = TRUE)),
+         utility_car_HBO = log(sum(exp_u_SOV_HBO,
+                                       exp_u_HOV_HBO,
+                                       na.rm = TRUE))) %>%
+  mutate(exp_u_active_HBO = exp(utility_active_HBO),
+         exp_u_car_HBO = exp(utility_car_HBO)) %>%
+  mutate(total_utility_HBO = sum(exp_u_active_HBO, 
+                                 exp_u_car_HBO,
+                                 exp_u_transit_HBO,
+                                 na.rm = TRUE)) %>%
+  ungroup()
+```
+
+## Probability of each mode
+
+The probability of taking a particular mode is given by:
+
+$p_m = \frac{e^{V_m}}{\sum\limits_{m'} e^{V_{m'}}}$
+
+```{r}
+skims <- skims %>%
+  mutate(p_transit_HBO = exp(utility_transit_HBO) / total_utility_HBO,
+         p_car_HBO = exp(utility_car_HBO) / total_utility_HBO,
+         p_active_HBO = exp(utility_active_HBO) / total_utility_HBO) 
   
 ```
 
-Now I can exponentiate that value to get the odds of taking transit for a trip.
+Now we can calculate the probability that someone who will travel by car would take an SOV or HOV and that someone who will travel by an active mode would
 
 ```{r}
 skims <- skims %>%
-  mutate(odds_transit_H = exp(log_odds_transit_H)) %>%
-  mutate(odds_transit_I = exp(log_odds_transit_I))
-  
+  mutate(p_SOV_if_car_HBO = exp(utility_SOV_HBO) / exp(utility_car_HBO),
+         p_HOV_if_car_HBO = exp(utility_HOV_HBO) / exp(utility_car_HBO),
+         p_walk_if_active_HBO = exp(utility_walk_HBO) / exp(utility_active_HBO),
+         p_bike_if_active_HBO = exp(utility_bike_HBO) / exp(utility_active_HBO))
 ```
 
-Odds are the ratio of the probability that something will happen to the probability that it won't happen. We can convert odds to probabilities with the formula:
-
-$p = \frac{odds}{1 + odds}$
+Then we can calculate the total probability for the modes within those nests and calculate the total number of trips by each mode.
 
 ```{r}
 skims <- skims %>%
-  mutate(p_carpool = odds_carpool / (1 + odds_carpool))
+  mutate(p_SOV_HBO = p_SOV_if_car_HBO * p_car_HBO,
+         p_HOV_HBO = p_HOV_if_car_HBO * p_car_HBO,
+         p_walk_HBO = p_walk_if_active_HBO * p_active_HBO,
+         p_bike_HBO = p_bike_if_active_HBO * p_active_HBO) 
 ```
 
+## Number of trips by mode
 
+Now we can multiply those mode shares by the trip flows we calculated in Assignment 8 to get the number of trips by each mode.
+
+```{r}
+skims <- skims %>%
+  mutate(n_transit_HBO = round(HBO_flow * p_transit_HBO),
+         n_SOV_HBO = round(HBO_flow * p_SOV_HBO),
+         n_HOV_HBO = round(HBO_flow * p_HOV_HBO),
+         n_walk_HBO = round(HBO_flow * p_walk_HBO),
+         n_bike_HBO = round(HBO_flow * p_bike_HBO)) %>%
+  replace_na(list(n_transit_HBO = 0,
+                  n_SOV_HBO = 0,
+                  n_HOV_HBO = 0,
+                  n_walk_HBO = 0,
+                  n_bike_HBO =0)) 
+```
+
+# Calculate regional mode shares and compare to survey data
+
+Now we can calculate the regional mode shares and compare it to what we observe in the NHTS.
+
+```{r}
+modeled_mode_by_purpose_1 <- tibble(
+  purpose = "HBO_model 1", 
+  pct_bike = sum(skims$n_bike_HBO) / 
+                 sum(skims$HBO_flow),
+  pct_SOV = sum(skims$n_SOV_HBO) / 
+                sum(skims$HBO_flow),
+  pct_HOV = sum(skims$n_HOV_HBO) / 
+                sum(skims$HBO_flow),
+  pct_transit = sum(skims$n_transit_HBO) / 
+                sum(skims$HBO_flow),
+  pct_walk = sum(skims$n_walk_HBO) / 
+                sum(skims$HBO_flow))
+
+model_compare <- rbind(mode_by_purpose, modeled_mode_by_purpose_1) 
+
+model_compare
+```
+
+Our model overestimates driving alone by about three percentage points and driving with others by about 19 percentage points. It underestimates walking by about 12 percentage points, transit by about nine percentage points, and cycling by just under percentage point. Try adjusting the values of your mode-specific constants to narrow these gaps.
+
+# Calibrate model
+
+I'll try increasing the mode-specific constants as follows:
+
+* Walking: from -1.79 to -0.5
+* Biking: from -4.54 to -3.5
+* Transit: from -2.2 to 0.0
+* SOV: from -0.84 to -1.5
+* HOV: from -0.44 to -1.2
+
+I didn't guess these values on my first try. I had to fiddle around with them a little. 
+
+Now I'll estimate my mode shares again.
+
+```{r}
+transit_const_HBO  <- 0
+SOV_const_HBO <- -1.5
+HOV_const_HBO <- -1.2
+bike_const_HBO <- -3.5
+walk_const_HBO <- -0.5
+
+skims <- skims %>%
+  mutate(utility_transit_HBO = transit_const_HBO +
+                               ride_time * -0.008  +
+                               (access_time + 
+                                 egress_time +
+                                 wait_time +
+                                 transfer_time) * -0.025 +
+                               transit_cost * -0.01,
+         utility_SOV_HBO = SOV_const_HBO +
+                           car_time * -0.008 +
+                           drive_cost * -0.01,
+         utility_HOV_HBO = HOV_const_HBO +
+                           car_time * -0.008 +
+                           carpool_cost * -0.01,
+         utility_walk_HBO = walk_const_HBO +
+                            walk_time * -0.025,
+         utility_bike_HBO = bike_const_HBO +
+                            bike_time * -0.025) %>%
+  mutate(exp_u_walk_HBO = exp(utility_walk_HBO),
+         exp_u_bike_HBO = exp(utility_bike_HBO),
+         exp_u_SOV_HBO = exp(utility_SOV_HBO),
+         exp_u_HOV_HBO = exp(utility_HOV_HBO),
+         exp_u_transit_HBO = exp(utility_transit_HBO)) %>%
+  rowwise() %>%
+  mutate(utility_active_HBO = log(sum(exp_u_walk_HBO, 
+                                          exp_u_bike_HBO, 
+                                          na.rm = TRUE)),
+         utility_car_HBO = log(sum(exp_u_SOV_HBO,
+                                       exp_u_HOV_HBO,
+                                       na.rm = TRUE))) %>%
+  mutate(exp_u_active_HBO = exp(utility_active_HBO),
+         exp_u_car_HBO = exp(utility_car_HBO)) %>%
+  mutate(total_utility_HBO = sum(exp_u_active_HBO, 
+                                 exp_u_car_HBO,
+                                 exp_u_transit_HBO,
+                                 na.rm = TRUE)) %>%
+  ungroup()  %>%
+  mutate(p_transit_HBO = exp(utility_transit_HBO) / total_utility_HBO,
+         p_car_HBO = exp(utility_car_HBO) / total_utility_HBO,
+         p_active_HBO = exp(utility_active_HBO) / total_utility_HBO)  %>%
+  mutate(p_SOV_if_car_HBO = exp(utility_SOV_HBO) / exp(utility_car_HBO),
+         p_HOV_if_car_HBO = exp(utility_HOV_HBO) / exp(utility_car_HBO),
+         p_walk_if_active_HBO = exp(utility_walk_HBO) / exp(utility_active_HBO),
+         p_bike_if_active_HBO = exp(utility_bike_HBO) / exp(utility_active_HBO)) %>%
+  mutate(p_SOV_HBO = p_SOV_if_car_HBO * p_car_HBO,
+         p_HOV_HBO = p_HOV_if_car_HBO * p_car_HBO,
+         p_walk_HBO = p_walk_if_active_HBO * p_active_HBO,
+         p_bike_HBO = p_bike_if_active_HBO * p_active_HBO) %>%
+  mutate(n_transit_HBO = round(HBO_flow * p_transit_HBO),
+         n_SOV_HBO = round(HBO_flow * p_SOV_HBO),
+         n_HOV_HBO = round(HBO_flow * p_HOV_HBO),
+         n_walk_HBO = round(HBO_flow * p_walk_HBO),
+         n_bike_HBO = round(HBO_flow * p_bike_HBO)) %>%
+  replace_na(list(n_transit_HBO = 0,
+                  n_SOV_HBO = 0,
+                  n_HOV_HBO = 0,
+                  n_walk_HBO = 0,
+                  n_bike_HBO =0)) 
+```
+
+Now I can compare my new mode shares to what I've observed from the survey.
+
+```{r}
+modeled_mode_by_purpose_2 <- tibble(
+  purpose = "HBO_model 2", 
+  pct_bike = sum(skims$n_bike_HBO) / 
+                 sum(skims$HBO_flow),
+  pct_SOV = sum(skims$n_SOV_HBO) / 
+                sum(skims$HBO_flow),
+  pct_HOV = sum(skims$n_HOV_HBO) / 
+                sum(skims$HBO_flow),
+  pct_transit = sum(skims$n_transit_HBO) / 
+                sum(skims$HBO_flow),
+  pct_walk = sum(skims$n_walk_HBO) / 
+                sum(skims$HBO_flow))
+
+model_compare2 <- rbind(model_compare, modeled_mode_by_purpose_2) 
+
+model_compare2
+```
+
+That's much closer.
