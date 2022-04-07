@@ -1,0 +1,203 @@
+---
+title: "Skills for Analysis Assignment 10"
+author: "GSD SES 5394"
+date: "Spring 2022"
+output: 
+  rmdformats::downcute
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+The following skills will be useful for Analysis Assignment 10. This is not a complete list of everything you will need to do to complete the assignment (and you might choose to complete the assignment without using some of the skills covered here); but it includes an overview of skills that you will not have encountered in prior assignments. 
+
+# Required packages
+
+```{r, warning=FALSE, message=FALSE, results='hide'}
+options(java.parameters = "-Xmx2G")
+
+library(here)
+library(tidyverse)
+library(stplanr)
+library(r5r)
+library(sf)
+```
+
+# Load data
+
+Load the skims file you've been working with in previous assignments. You'll need the columns with the production and attraction zone IDs, the transit routes included in that transit trip, and the number of trips by each mode for each trip purpose (in this example, I'll only be demonstrating with HBO trips, but you'll need to include all three trip purposes).
+
+```{r}
+skims <- here("existing",
+                     "data",
+                     "skims.csv") %>%
+  read_csv(show_col_types = FALSE) %>%
+  select(fromId, 
+         toId, 
+         n_transit_HBO,
+         n_SOV_HBO,
+         n_HOV_HBO,
+         n_walk_HBO,
+         n_bike_HBO,
+         routes) %>%
+  mutate(fromId = as.character(fromId),
+         toId = as.character(toId))
+
+```
+
+# Transit Assignmnet
+
+## Convert PA matrix to OD matrix
+
+We're going to take the simplest possible approach to converting a production-attraction matrix to an origin-destination matrix, which is to average the PA matrix with its transpose. 
+
+### Convert data frame to matrix
+
+To transpose a matrix, we'll need to convert it from a long table of production-attraction pairs to a matrix with rows of productions and columns of attractions.
+
+The line `HBO_trip_mat <- HBO_trip_mat[,row.names(HBO_trip_mat)]` rearranges the columns to be in the same order as the rows so that intrazonal trips (which should all be zero) are along the diagonal of the matrix.
+
+```{r}
+HBO_PA_mat <- skims %>%
+  od_to_odmatrix(attrib = "n_transit_HBO", 
+                 name_orig = "fromId",
+                 name_dest = "toId") 
+
+HBO_PA_mat <- HBO_PA_mat[,row.names(HBO_PA_mat)]
+```
+
+### Transpose matrix
+
+Now you can transpose the trip matrix. Origin-destination matrices for a full day would be symmetrical along the diagonal, so the transpose would be identical to the original matrix.
+
+```{r}
+HBO_PA_mat_trans <- t(HBO_PA_mat)
+```
+
+### Average matrix with its transpose
+
+To get a symmetrical matrix, you can average the original PA matrix with its transpose.
+
+```{r}
+HBO_OD_mat <- (HBO_PA_mat + HBO_PA_mat_trans) / 2
+```
+
+### Convert matrix to data frame
+
+Now I can convert the matrix back to an OD table, and join it to my skim. I'll delete the column with the PA flow so that I don't get it confused with the OD flow.
+
+```{r, message=FALSE}
+HBO_OD_table <- HBO_OD_mat %>%
+  odmatrix_to_od() %>%
+  rename(fromId = orig,
+         toId = dest) %>%
+  left_join(skims) %>%
+  select(-n_transit_HBO)
+```
+## Count trips using each route
+
+Now we just need to count up the trips using each route. This results in a table with a row for each transit route and a column indicating the expected ridership on that route. Note that this is only the ridership from HBO trips. You'll need to do all this for each trip purpose and add up the those values to get the total ridership.
+
+```{r}
+route_trips <- HBO_OD_table %>%
+  filter(flow > 0 & !is.na(routes)) %>%
+  mutate(route_1 = str_split_fixed(routes, "\\|", 3)[,1],
+         route_2 = str_split_fixed(routes, "\\|", 3)[,2],
+         route_3 = str_split_fixed(routes, "\\|", 3)[,3]) %>%
+  pivot_longer(cols = c(route_1, route_2, route_3),
+               values_to = "route") %>%
+  filter(route != "") %>%
+  select(route, flow) %>%
+  group_by(route) %>%
+  summarize(ridership = round(sum(flow)))
+```
+
+# VMT and PMT by mode
+
+## Calculate trip distances
+
+To estimate PMT by walking or cycling, you'll need to know the distance between each production-attraction pair (up to this point, we've only been working with travel times). 
+
+`detailed_itineraries()` in the r5r package will return distances (in meters, which we'll convert to miles), but it doesn't pair each origin with all possible destinations. You'll need to set up a list of orgins and destinations to take care of that.
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+ centroids <- here("zones",
+                   "centroids.geojson") %>%
+  st_read() %>%
+  rename(id = GEOID) %>%
+  filter(!st_is_empty(.)) 
+
+origins <- centroids %>% 
+  slice(rep(1:n(), each = n())) %>% 
+  mutate(dest_order = 
+           rep(seq(1:length(centroids$id)),
+               length(centroids$id)))
+
+destinations <- origins %>%
+  arrange(dest_order)
+
+r5r_core_existing <- here("existing",
+                          "networks") %>%
+  setup_r5(verbose = FALSE)
+
+ped_dist <- detailed_itineraries(r5r_core_existing,
+                                 origins = origins,
+                                 destinations = destinations,
+                                 mode = "WALK",
+                                 verbose = FALSE)  %>%
+  mutate(miles = distance / 1609.34) %>%
+  select(fromId, toId, miles) %>%
+  st_drop_geometry()
+
+drive_dist <- detailed_itineraries(r5r_core_existing,
+                                 origins = origins,
+                                 destinations = destinations,
+                                 mode = "CAR",
+                                 verbose = FALSE) %>%
+  mutate(miles = distance / 1609.34) %>%
+  select(fromId, toId, miles) %>%
+  st_drop_geometry()
+
+bike_dist <- detailed_itineraries(r5r_core_existing,
+                                 origins = origins,
+                                 destinations = destinations,
+                                 mode = "BICYCLE",
+                                 verbose = FALSE) %>%
+  mutate(miles = distance / 1609.34) %>%
+  select(fromId, toId, miles) %>%
+  st_drop_geometry()
+
+stop_r5() 
+
+```
+## Calculate PMT by mode
+
+PMT by any mode would be the number of trips for each production-attraction pair multiplied by the trip distance. Here's how you would do that for car trips (HOV and SOV).
+
+```{r}
+PMT_car <- skims %>%
+  left_join(drive_dist, by = c("fromId", "toId")) %>%
+  select(n_SOV_HBO, n_HOV_HBO, miles) %>%
+  mutate(PMT_SOV_HBO = n_SOV_HBO * miles,
+         PMT_HOV_HBO = n_HOV_HBO * miles) %>%
+  summarize(total_SOV_miles = sum(PMT_SOV_HBO),
+            total_HOV_miles = sum(PMT_HOV_HBO))
+
+PMT_car
+```
+
+## Calculate VMT
+
+To calculate the VMT, we need to make an assumption about vehicle occupancy for HOV trips. You can calculate this value from NHTS data, or you can use a value from NCHRP 716, Table 4-16.
+
+![](images/NCHRP 4-16.png)
+```{r}
+VMT <- PMT_car$total_SOV_miles[1] + 
+       PMT_car$total_HOV_miles[1] / 2.71
+
+VMT
+```
+

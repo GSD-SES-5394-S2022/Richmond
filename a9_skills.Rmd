@@ -137,7 +137,7 @@ skims <- skims %>%
   mutate(transit_cost = n_rides * cost_per_ride)
 ```
 
-If someone carpools, they can split the cost of driving among all vehicle occupants. Table 4.16 of NCHRP 716 indicates that, for HBW trips, the average vehicle occupance of 2+ carpools is 2.42, so we'll divide the cost of driving by 2.42 to get the cost of carpooling.
+If someone carpools, they can split the cost of driving among all vehicle occupants. Table 4.16 of NCHRP 716 indicates that, for HBO trips, the average vehicle occupance of 2+ carpools is 2.42, so we'll divide the cost of driving by 2.42 to get the cost of carpooling.
 
 ```{r}
 skims <- skims %>%
