@@ -16,7 +16,6 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 
 *Note: In general, you should load all your libraries at the beginning of your script or markdown file. In these examples, I'm loading libraries at the top of each code chunk to make it more clear which methods use which packages.*
 
-* **Add households or jobs to a tract**: Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
 * **Apply a ggplot theme:** You have a lot of flexibility in designing your ggplot charts and maps, but some pre-defined themes can save you some time on that.
 * **Calculate an area:** A lot of the variables you're likely to be working with are counts (e.g. number of households or number of jobs). When you show those on a chloropleth map, you might decide that a density (e.g. jobs or households per square mile) is more informative. Or you might even decide a density is one of the variables you want to include in your model. Before you can calculate a density, you'll need to calculate the area of each zone (for example, in square miles or square kilometers).
 * **Calculate new variables:** When you download data from the census or from LEHD, you might need to combine multiple variables together to get the variable you actually want. For example, you might need to add the number of households in each of multiple income categories to get the number in a combined income category, or you might need to divide the number of jobs by the area of each tract to get an employment density.
@@ -26,7 +25,7 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Create a dot-density map:** A dot-density map can be useful for visualizing how the densities of things in one or more categories vary across space, without having to actually calculate densities.
 * **Create a histogram:** A histogram is a helpful way to illustrate the variation in a variable.
 * **Create an interactive map:** Even if your deliverable will be all static content in a report, it can be helpful to create an interactive map for your own use to explore your data. For example, it's a useful way to find the GEOID for a zone in a specific location.
-* **Create a tree map:** There is a school of thought that is really against pie charts, and the developers of ggplot are part of that school, so they make it tricky to make a pie chart. Tree maps are nice alternative that avoid some of the pitfalls of pie charts. 
+* **Create a tree map:** Tree maps are nice way to visualize proportions while avoiding some of the pitfalls of pie charts. 
 * **Customize axes and legends:** You'll likely want to define titles for the axes and legends on any graphics you create. You might also want to control how number are displayed on axes and legends.
 * **Define a color ramp:** There are several predefined color palettes you can use, and some useful functions you can use to select colors in `ggplot`.
 * **Define study area boundary:** In this class, your study area is a metropolitan statistical area. You can use the `tigris` or `tidycensus` package to get the boundary of your study area. This can be especially useful if your study area includes many counties.
@@ -41,32 +40,6 @@ The followings skills will be useful for Analysis Assignment 2. They are listed 
 * **Summarize tract statistics:** Histograms and maps are great, but a table can also be really informative.
 * **Write data to a file:** When you have all the data how you want it, you should save it so you can use it for subsequent assignments. 
 * **Write figures to a file:** Creating maps and charts in RMarkdown is great, but you'll eventually want to save them as files you can include in a report or presentation.
-
-# Add households or jobs to a tract
-
-Your proposed alternative might involve a land use change that would add households or jobs to one or more specific tracts.
-
-Maybe my proposal is to build a bunch of low-income housing in a particular neighborhood, and I think the result would be to add 100 low-income, zero-car, 1-person households to tract 51041101013 (that's the GEOID code). I'd need to add 100 to the total number of households, to the number of housholds in the lowest income quintile, to the number of zero-car households, and to the number of 1-person households.
-
-For each variable I want to change, I'll use an `ifelse()` function to indicate that for a row where the GEOID is "36029004602" (`GEOID == "36029004602"` in the first argument of the `ifelse()` function), I want to increase the value by 100 (`total_hhsE + 100` in the second argument), otherwise I'll leave the original value (`total_hhsE` in the last argument).
-
-```{r, eval=FALSE}
-library(tidyverse)
-
-zones_new <- final_data %>%
-  mutate(total_hhsE = ifelse(GEOID == "36029004602",
-                             total_hhsE + 100,
-                             total_hhsE),
-         no_vehE = ifelse(GEOID == "36029004602",
-                             no_vehE + 100,
-                             no_vehE),
-         hh_1personE = ifelse(GEOID == "36029004602",
-                             hh_1personE + 100,
-                             hh_1personE),
-         inc_quint_1 = ifelse(GEOID == "36029004602",
-                             inc_quint_1 + 100,
-                             inc_quint_1))
-```
 
 
 # Apply a ggplot theme
@@ -158,7 +131,6 @@ library(tidyverse)
 hh_size_map +
   theme_void()
 ```
-
 
 # Calculate an area
 
@@ -406,11 +378,11 @@ Now I'll get the total values for the full study area.
 library(tidycensus)
 
 region_vehs <- get_acs(
-  geography = "metropolitan statistical area/micropolitan statistical area",
+  geography = "cbsa",
   variables = vars,
   summary_var = total_hhs,
   geometry = FALSE) %>%
-  filter(GEOID == "40060") %>%
+  filter(GEOID == "15380") %>%
   mutate(pct = estimate / summary_est) %>%
   select(variable, pct)
 ```
@@ -447,7 +419,7 @@ First I'll need to get some total values for the whole region (see the topic on 
 
 Let's say I wanted to get the regional share of households that have zero, one, or multiple vehicles. First I'll set up a list of variables with the numbers of households with zero, one, two, three, or more than three vehicles. I'll also separately save the variable name for the total number of households.
 
-```{r, eval=FALSE}
+```{r}
 vars <- c(`Zero vehicles` = 'B08201_002',
           `One vehicle` = 'B08201_003',
           `Two vehicles` = 'B08201_004',
@@ -459,11 +431,11 @@ total_hhs <- 'B08201_001'
 
 Now I'll get the total values for the full study area.
 
-```{r, eval=FALSE}
+```{r}
 library(tidycensus)
 
 region_vehs <- get_acs(
-  geography = "metropolitan statistical area/micropolitan statistical area",
+  geography = "cbsa",
   variables = vars,
   summary_var = total_hhs,
   geometry = FALSE) %>%
@@ -480,7 +452,7 @@ library(treemapify)
 ggplot(region_vehs, aes(area = pct, fill= variable)) +
   geom_treemap(show.legend = FALSE, color = NA) +
   geom_treemap_text(aes(label = paste(variable, "\n",
-                                      prettyNum(pct * 100, digits = 0),
+                                      prettyNum(pct * 100, digits = 1),
                                       "%",sep = "")), 
                         color = "white") +
   scale_fill_brewer(palette = "Set2")
@@ -859,7 +831,7 @@ In this example, I want to have some tract-level variables that indicate how man
 
 First I'll create a list of variables indicating the number of households in each of 16 income categories (see the "List census variable names" topic).
 
-```{r, eval=FALSE}
+```{r}
 vars <- c(inc_lt_10k = 'B19001_002',
           inc_btw_10k_15k = 'B19001_003',
           inc_btw_15k_20k = 'B19001_004',
@@ -892,7 +864,7 @@ library(tidyverse)
 library(knitr)
 
 region_inc <- get_acs(
-  geography = "metropolitan statistical area/micropolitan statistical area",
+  geography = "cbsa",
   variables = vars,
   summary_var = 'B19001_001',
   geometry = FALSE) %>%
@@ -908,7 +880,7 @@ Now I can print the table (see the "Summarize tract statistics" topic).
 kable(region_inc, digits=2)
 ```
 
-From the table above, I can see that 20 percent of households have incomes below \$25,000 per year, 40 percent have incomes below \$50,000 per year, 60 percent (or close enough) have incomes below \$75,000, and 80 percent have incomes below \$100,000 per year. These are thresholds I could use to define broader income categories for my tract-level data. 
+From the table above, I can see that 20 percent of households have incomes below \$25,000 per year, 36 percent have incomes below \$50,000 per year, 54 percent have incomes below \$75,000, and 82 percent have incomes below \$150,000 per year. These are thresholds I could use to define broader income categories (which approximately correspond to quintiles) for my tract-level data. 
 
 # Join two data frames
 
